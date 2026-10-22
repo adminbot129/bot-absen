@@ -53,8 +53,8 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if aksi in menu_valid:
         sedang_izin = status_karyawan.get(user_id)
         
-        # 1. Cek jika belum check-in tapi langsung pilih izin atau kembali kursi
-        if aksi in ["IZIN MAKAN", "IZIN MEROKOK/WC", "KEMBALI KURSI"] and not sedang_izin:
+        # 1. Cek jika belum check-in (atau sudah pulang / None) tapi mencoba aksi selain MASUK KERJA
+        if aksi != "MASUK KERJA" and not sedang_izin:
             await update.message.reply_text(
                 f"⚠️ <b>GAGAL MELAKUKAN AKSI</b>\n"
                 f"<i>(操作失败)</i>\n"
