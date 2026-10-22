@@ -16,7 +16,7 @@ def home():
 status_karyawan = {}
 waktu_mulai_izin = {}
 hitung_izin = {}
-waktu_masuk_kerja = {}  # Variabel untuk mencatat waktu masuk kerja
+waktu_masuk_kerja = {}
 
 # Zona Waktu Indonesia Barat (WIB / Jakarta)
 WIB = ZoneInfo("Asia/Jakarta")
@@ -62,12 +62,12 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 f"│        ⚠️ GAGAL MELAKUKAN AKSI       │\n"
                 f"│            (操作失败)                │\n"
                 f"├──────────────────────────────────────┤\n"
-                f"│ 👤 Nama / 姓名 :                     │\n"
-                f"│    {nama:<33} │\n"
-                f"│ 📱 ID : {user_id:<28} │\n"
+                f"│ 👤 Nama / 姓名 :                     \n"
+                f"    {nama}                             \n"
+                f"│ 📱 ID : {user_id}                    \n"
                 f"├──────────────────────────────────────┤\n"
-                f"│ ❌ Keterangan / 说明 :               │\n"
-                f"│    Belum MASUK KERJA / 尚未上班打卡  │\n"
+                f"│ ❌ Keterangan / 说明 :               \n"
+                f"    Belum MASUK KERJA / 尚未上班打卡    \n"
                 f"└──────────────────────────────────────┘"
                 f"</pre>",
                 parse_mode="HTML"
@@ -82,12 +82,12 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 f"│        ⚠️ SUDAH MASUK KERJA          │\n"
                 f"│            (已经上班打卡)            │\n"
                 f"├──────────────────────────────────────┤\n"
-                f"│ 👤 Nama / 姓名 :                     │\n"
-                f"│    {nama:<33} │\n"
-                f"│ 📱 ID : {user_id:<28} │\n"
+                f"│ 👤 Nama / 姓名 :                     \n"
+                f"    {nama}                             \n"
+                f"│ 📱 ID : {user_id}                    \n"
                 f"├──────────────────────────────────────┤\n"
-                f"│ ❌ Keterangan / 说明 :               │\n"
-                f"│    Sudah check-in sebelumnya!        │\n"
+                f"│ ❌ Keterangan / 说明 :               \n"
+                f"    Sudah check-in sebelumnya!         \n"
                 f"└──────────────────────────────────────┘"
                 f"</pre>",
                 parse_mode="HTML"
@@ -102,12 +102,12 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 f"│        ⚠️ GAGAL KEMBALI KURSI        │\n"
                 f"│            (无法返回座位)            │\n"
                 f"├──────────────────────────────────────┤\n"
-                f"│ 👤 Nama / 姓名 :                     │\n"
-                f"│    {nama:<33} │\n"
-                f"│ 📱 ID : {user_id:<28} │\n"
+                f"│ 👤 Nama / 姓名 :                     \n"
+                f"    {nama}                             \n"
+                f"│ 📱 ID : {user_id}                    \n"
                 f"├──────────────────────────────────────┤\n"
-                f"│ ❌ Keterangan / 说明 :               │\n"
-                f"│    Tidak sedang dalam status izin!   │\n"
+                f"│ ❌ Keterangan / 说明 :               \n"
+                f"    Tidak sedang dalam status izin!    \n"
                 f"└──────────────────────────────────────┘"
                 f"</pre>",
                 parse_mode="HTML"
@@ -122,12 +122,12 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 f"│        ⚠️ GAGAL MEMILIH IZIN         │\n"
                 f"│            (无法选择请假)            │\n"
                 f"├──────────────────────────────────────┤\n"
-                f"│ 👤 Nama / 姓名 :                     │\n"
-                f"│    {nama:<33} │\n"
-                f"│ 📱 ID : {user_id:<28} │\n"
+                f"│ 👤 Nama / 姓名 :                     \n"
+                f"    {nama}                             \n"
+                f"│ 📱 ID : {user_id}                    \n"
                 f"├──────────────────────────────────────┤\n"
-                f"│ ❌ Status Aktif / 当前状态 :         │\n"
-                f"│    {sedang_izin:<33} │\n"
+                f"│ ❌ Status Aktif / 当前状态 :         \n"
+                f"    {sedang_izin}                      \n"
                 f"└──────────────────────────────────────┘"
                 f"</pre>",
                 parse_mode="HTML"
@@ -152,14 +152,14 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
             detail_isi = (
                 f"├──────────────────────────────────────┤\n"
                 f"│ ⏱️ Status / 状态 :\n"
-                f"│    Berhasil Kembali ke Kursi\n"
-                f"│    (已返回座位继续工作)\n"
+                f"    Berhasil Kembali ke Kursi\n"
+                f"    (已返回座位继续工作)\n"
                 f"├──────────────────────────────────────┤\n"
                 f"│ ⏳ Detail Waktu Izin / 假用时 :\n"
-                f"│    {info_durasi_total}\n"
+                f"    {info_durasi_total}\n"
                 f"├──────────────────────────────────────┤\n"
                 f"│ 🔢 Total Cek In / 总打卡次数 :\n"
-                f"│    Ke-{ke_berapa} / 第{ke_berapa}次"
+                f"    Ke-{ke_berapa} / 第{ke_berapa}次"
             )
             pesan_penutup = "Terima kasih, sudah kembali tepat waktu.\n(谢谢您，按时返回。)"
 
@@ -186,19 +186,19 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 detail_isi = (
                     f"├──────────────────────────────────────┤\n"
                     f"│ ⏱️ Status / 状态 :\n"
-                    f"│    TERLAMBAT / 迟到\n"
+                    f"    TERLAMBAT / 迟到\n"
                     f"├──────────────────────────────────────┤\n"
                     f"│ ❌ Keterangan / 说明 :\n"
-                    f"│    Terlambat {info_telat}\n"
-                    f"│    (超过规定上班时间 09:30)"
+                    f"    Terlambat {info_telat}\n"
+                    f"    (超过规定上班时间 09:30)"
                 )
                 pesan_penutup = "Harap datang lebih tepat waktu esok hari!\n(希望明天能按时到达！)"
             else:
                 detail_isi = (
                     f"├──────────────────────────────────────┤\n"
                     f"│ ⏱️ Status / 状态 :\n"
-                    f"│    Berhasil Check-in Tepat Waktu\n"
-                    f"│    (准时上班打卡成功)"
+                    f"    Berhasil Check-in Tepat Waktu\n"
+                    f"    (准时上班打卡成功)"
                 )
                 pesan_penutup = "Selamat bekerja, jaga kedisiplinan!\n(祝您工作愉快，遵守纪律！)"
 
@@ -212,10 +212,10 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
             detail_isi = (
                 f"├──────────────────────────────────────┤\n"
                 f"│ ⏱️ Alokasi Izin / 规定时长 :\n"
-                f"│    30 Menit / 分钟\n"
+                f"    30 Menit / 分钟\n"
                 f"├──────────────────────────────────────┤\n"
                 f"│ 🔢 Total Cek In / 总打卡次数 :\n"
-                f"│    Ke-{ke_berapa} / 第{ke_berapa}次"
+                f"    Ke-{ke_berapa} / 第{ke_berapa}次"
             )
             pesan_penutup = "Silakan kembali ke kursi tepat waktu.\n(请按时返回座位。)"
 
@@ -229,10 +229,10 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
             detail_isi = (
                 f"├──────────────────────────────────────┤\n"
                 f"│ ⏱️ Alokasi Izin / 规定时长 :\n"
-                f"│    15 Menit / 分钟\n"
+                f"    15 Menit / 分钟\n"
                 f"├──────────────────────────────────────┤\n"
                 f"│ 🔢 Total Cek In / 总打卡次数 :\n"
-                f"│    Ke-{ke_berapa} / 第{ke_berapa}次"
+                f"    Ke-{ke_berapa} / 第{ke_berapa}次"
             )
             pesan_penutup = "Silakan kembali ke kursi tepat waktu.\n(请按时返回座位。)"
 
@@ -244,7 +244,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 sisa_detik_kerja = selisih_kerja % 3600
                 menit_kerja = sisa_detik_kerja // 60
                 detik_kerja = sisa_detik_kerja % 60
-                info_durasi_kerja = f"{jam_kerja} jam {menit_kerja} menit {detik_kerja} detik\n│    ({jam_kerja}小时{menit_kerja}分{detik_kerja}秒)"
+                info_durasi_kerja = f"{jam_kerja} jam {menit_kerja} menit {detik_kerja} detik\n    ({jam_kerja}小时{menit_kerja}分{detik_kerja}秒)"
             else:
                 info_durasi_kerja = "Tidak tercatat / 未记录"
 
@@ -254,11 +254,11 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
             detail_isi = (
                 f"├──────────────────────────────────────┤\n"
                 f"│ ⏱️ Status / 状态 :\n"
-                f"│    Selesai Shift / Pulang\n"
-                f"│    (下班 / 班次结束)\n"
+                f"    Selesai Shift / Pulang\n"
+                f"    (下班 / 班次结束)\n"
                 f"├──────────────────────────────────────┤\n"
                 f"│ ⏳ Total Waktu Kerja / 总工作时长 :\n"
-                f"│    {info_durasi_kerja}"
+                f"    {info_durasi_kerja}"
             )
             pesan_penutup = "Terima kasih atas kerja keras hari ini.\nHati-hati di jalan.\n(感谢今天的辛勤工作，一路平安。)"
 
@@ -268,15 +268,15 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
             f"│        📋 LAPORAN ABSEN ANGGOTA      │\n"
             f"│             (员工考勤报告)           │\n"
             f"├──────────────────────────────────────┤\n"
-            f"│ 👤 Nama / 姓名 :                     │\n"
-            f"│    {nama:<33} │\n"
-            f"│ 📱 ID : {str(user_id):<28} │\n"
+            f"│ 👤 Nama / 姓名 :\n"
+            f"    {nama}\n"
+            f"│ 📱 ID : {user_id}\n"
             f"├──────────────────────────────────────┤\n"
-            f"│ 📝 Detail / 详情 :                   │\n"
-            f"│    {aksi:<33} │\n"
+            f"│ 📝 Detail / 详情 :\n"
+            f"    {aksi}\n"
             f"├──────────────────────────────────────┤\n"
-            f"│ ⏰ Waktu / 时间 :                    │\n"
-            f"│    {waktu_str:<33} │\n"
+            f"│ ⏰ Waktu / 时间 :\n"
+            f"    {waktu_str}\n"
             f"{detail_isi}\n"
             f"└──────────────────────────────────────┘\n"
             f"{pesan_penutup}"
