@@ -59,7 +59,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await update.message.reply_text(
                 f"<pre>"
                 f"┌──────────────────────────────────────┐\n"
-                f"│        ⚠️ GAGAL MELAKUKAN AKSI       \n"
+                f"│        ⚠️ GAGAL MELAKUKAN AKSI        \n"
                 f"│            (操作失败)                \n"
                 f"├──────────────────────────────────────┤\n"
                 f"│ 👤 Nama / 姓名 :\n"
@@ -119,7 +119,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await update.message.reply_text(
                 f"<pre>"
                 f"┌──────────────────────────────────────┐\n"
-                f"│        ⚠️ GAGAL MEMILIH IZIN         \n"
+                f"│        ⚠️ GAGAL MEMILIH IZIN          \n"
                 f"│            (无法选择请假)            \n"
                 f"├──────────────────────────────────────┤\n"
                 f"│ 👤 Nama / 姓名 :\n"
@@ -291,15 +291,19 @@ def run_flask():
 
 if __name__ == "__main__":
     import threading
+    
+    # 1. Jalankan Flask di background thread supaya web server Render tetap merespon port 10000
     flask_thread = threading.Thread(target=run_flask)
     flask_thread.daemon = True
     flask_thread.start()
 
-    TOKEN = "8929417098:AAHqjy5pdj1vjNkRNUHSmRPzoALTutlsfwA"
-    
+    # 2. Ambil token bot dari Environment Variable di Render (supaya lebih aman daripada ditulis mentah)
+    TOKEN = os.getenv("8929417098:AAHqjy5pdj1vjNkRNUHSmRPzoALTutlsfwA")
+
+    # 3. Jalankan bot Telegram menggunakan polling utama
     application = ApplicationBuilder().token(TOKEN).build()
     application.add_handler(CommandHandler("start", start))
     application.add_handler(MessageHandler(filters.TEXT & (~filters.COMMAND), handle_message))
     
-# print("Bot Telegram mulai berjalan...")
-# application.run_polling()
+    print("Bot Telegram mulai berjalan...")
+    application.run_polling()
