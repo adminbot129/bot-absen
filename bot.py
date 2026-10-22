@@ -13,7 +13,10 @@ def home():
     return "Bot Absen Telegram Aktif!"
 
 def run_flask():
-    app_flask.run(host='0.0.0.0', port=10000)
+    # Render menggunakan port dari environment variable PORT atau 10000 secara default
+    import os
+    port = int(os.environ.get("PORT", 10000))
+    app_flask.run(host='0.0.0.0', port=port)
 
 def keep_alive():
     t = Thread(target=run_flask)
