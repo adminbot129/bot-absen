@@ -146,9 +146,17 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
             
             if waktu_sekarang > jam_masuk_batas:
                 selisih_telat = int((waktu_sekarang - jam_masuk_batas).total_seconds())
-                menit_telat = selisih_telat // 60
-                detik_telat = selisih_telat % 60
-                info_telat = f"{menit_telat} menit {detik_telat} detik /迟到 {menit_telat}分{detik_telat}秒"
+                
+                # Perhitungan Jam, Menit, dan Detik secara akurat
+                jam_telat = selisih_telat // 3600
+                sisa_detik = selisih_telat % 3600
+                menit_telat = sisa_detik // 60
+                detik_telat = sisa_detik % 60
+                
+                if jam_telat > 0:
+                    info_telat = f"{jam_telat} jam {menit_telat} menit {detik_telat} detik / 迟到 {jam_telat}小时{menit_telat}分{detik_telat}秒"
+                else:
+                    info_telat = f"{menit_telat} menit {detik_telat} detik / 迟到 {menit_telat}分{detik_telat}秒"
                 
                 detail_isi = (
                     f"⚠️ <b>Status / 状态 :</b> TERLAMBAT / 迟到\n"
