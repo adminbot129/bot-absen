@@ -1,5 +1,6 @@
 import os
 from datetime import datetime
+from zoneinfo import ZoneInfo
 from flask import Flask
 from telegram import KeyboardButton, ReplyKeyboardMarkup, Update
 from telegram.ext import ApplicationBuilder, CommandHandler, ContextTypes, MessageHandler, filters
@@ -16,10 +17,13 @@ status_karyawan = {}
 waktu_mulai_izin = {}
 hitung_izin = {}
 
+# Zona Waktu Indonesia Barat (WIB / Jakarta)
+WIB = ZoneInfo("Asia/Jakarta")
+
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     keyboard = [
         [KeyboardButton("MASUK KERJA"), KeyboardButton("PULANG KERJA")],
-        [KeyboardButton("IZIN MAKAN"), KeyboardButton("IZIN MEROKOK")],
+        [KeyboardButton("IZIN MAKAN"), KeyboardButton("IZIN MEROKOK/WC")],
         [KeyboardButton("KEMBALI KURSI")]
     ]
     reply_markup = ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
@@ -40,16 +44,17 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = user.id
     aksi = update.message.text.strip()
     
-    waktu_sekarang = datetime.now()
+    # Waktu real-time akurat sesuai zona waktu WIB (Jakarta)
+    waktu_sekarang = datetime.now(WIB)
     waktu_str = waktu_sekarang.strftime("%d %B %Y, %H:%M:%S WIB")
     
-    menu_valid = ["MASUK KERJA", "PULANG KERJA", "IZIN MAKAN", "IZIN MEROKOK", "KEMBALI KURSI"]
+    menu_valid = ["MASUK KERJA", "PULANG KERJA", "IZIN MAKAN", "IZIN MEROKOK/WC", "KEMBALI KURSI"]
     
     if aksi in menu_valid:
         sedang_izin = status_karyawan.get(user_id)
         
         # 1. Cek jika belum check-in tapi langsung pilih izin atau kembali kursi
-        if aksi in ["IZIN MAKAN", "IZIN MEROKOK", "KEMBALI KURSI"] and not sedang_izin:
+        if aksi in ["IZIN MAKAN", "IZIN MEROKOK/WC", "KEMBALI KURSI"] and not sedang_izin:
             await update.message.reply_text(
                 f"⚠️ <b>GAGAL MELAKUKAN AKSI</b>\n"
                 f"<i>(操作失败)</i>\n"
@@ -79,21 +84,21 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
             return
 
         # 3. Belum dalam status izin tapi klik kembali kursi
-        if aksi == "KEMBALI KURSI" and sedang_izin not in ["IZIN MAKAN", "IZIN MEROKOK"]:
+        if aksi == "KEMBALI KURSI" and sedang_izin not in ["IZIN MAKAN", "IZIN MEROKOK/WC"]:
             await update.message.reply_text(
                 f"⚠️ <b>GAGAL KEMBALI KURSI</b>\n"
                 f"<i>(无法返回座位)</i>\n"
                 f"────────────────\n"
                 f"👤 <b>Nama / 姓名 :</b> {nama}\n"
                 f"────────────────\n"
-                f"❌ <b>Keterangan / 说明 :</b> Anda tidak sedang dalam status Izin Makan atau Izin Merokok!\n"
-                f"<i>(您当前不在吃饭或抽烟状态，无需点击返回座位！)</i>",
+                f"❌ <b>Keterangan / 说明 :</b> Anda tidak sedang dalam status Izin Makan atau Izin Merokok/WC!\n"
+                f"<i>(您当前不在吃饭或抽烟/WC状态，无需点击返回座位！)</i>",
                 parse_mode="HTML"
             )
             return
 
         # 4. Sedang izin tertentu, tapi malah pilih izin lain (Harus KEMBALI KURSI dulu)
-        if aksi in ["IZIN MAKAN", "IZIN MEROKOK"] and sedang_izin in ["IZIN MAKAN", "IZIN MEROKOK"]:
+        if aksi in ["IZIN MAKAN", "IZIN MEROKOK/WC"] and sedang_izin in ["IZIN MAKAN", "IZIN MEROKOK/WC"]:
             await update.message.reply_text(
                 f"⚠️ <b>GAGAL MEMILIH IZIN</b>\n"
                 f"<i>(无法选择请假)</i>\n"
@@ -135,11 +140,28 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
         elif aksi == "MASUK KERJA":
             status_karyawan[user_id] = "MASUK"
-            detail_isi = (
-                f"⏱️ <b>Status / 状态 :</b> Berhasil Check-in / Masuk Kerja\n"
-                f"<i>(上班打卡成功)</i>"
-            )
-            pesan_penutup = "Selamat bekerja, jaga kedisiplinan!\n(祝您工作愉快，遵守纪律！)"
+            
+            # Batas jam masuk kantor (09:30:00 WIB)
+            jam_masuk_batas = waktu_sekarang.replace(hour=9, minute=30, second=0, microsecond=0)
+            
+            if waktu_sekarang > jam_masuk_batas:
+                selisih_telat = int((waktu_sekarang - jam_masuk_batas).total_seconds())
+                menit_telat = selisih_telat // 60
+                detik_telat = selisih_telat % 60
+                info_telat = f"{menit_telat} menit {detik_telat} detik /迟到 {menit_telat}分{detik_telat}秒"
+                
+                detail_isi = (
+                    f"⚠️ <b>Status / 状态 :</b> TERLAMBAT / 迟到\n"
+                    f"❌ <b>Keterangan :</b> Anda terlambat {info_telat} dari jam masuk (09:30 WIB)\n"
+                    f"<i>(您迟到了，超过了规定上班时间 09:30)</i>"
+                )
+                pesan_penutup = "Harap datang lebih tepat waktu esok hari!\n(希望明天能按时到达！)"
+            else:
+                detail_isi = (
+                    f"⏱️ <b>Status / 状态 :</b> Berhasil Check-in Tepat Waktu\n"
+                    f"<i>(准时上班打卡成功)</i>"
+                )
+                pesan_penutup = "Selamat bekerja, jaga kedisiplinan!\n(祝您工作愉快，遵守纪律！)"
 
         elif aksi == "IZIN MAKAN":
             status_karyawan[user_id] = aksi
@@ -155,7 +177,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
             )
             pesan_penutup = "Silakan kembali ke kursi tepat waktu.\n(请按时返回座位。)"
 
-        elif aksi == "IZIN MEROKOK":
+        elif aksi == "IZIN MEROKOK/WC":
             status_karyawan[user_id] = aksi
             waktu_mulai_izin[user_id] = waktu_sekarang
             kunci_hitung = (user_id, aksi)
