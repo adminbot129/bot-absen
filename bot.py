@@ -6,7 +6,7 @@ from telegram import KeyboardButton, ReplyKeyboardMarkup, Update
 from telegram.ext import ApplicationBuilder, CommandHandler, ContextTypes, MessageHandler, filters
 
 # Inisialisasi Flask untuk port Render
-app = Flask('')
+app = Flask(__name__)
 
 @app.route('/')
 def home():
