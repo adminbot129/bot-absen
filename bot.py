@@ -1,26 +1,17 @@
-import asyncio
-from datetime import datetime
-from threading import Thread
 import os
+from datetime import datetime
 from flask import Flask
 from telegram import KeyboardButton, ReplyKeyboardMarkup, Update
 from telegram.ext import ApplicationBuilder, CommandHandler, ContextTypes, MessageHandler, filters
 
-app_flask = Flask('')
+# Inisialisasi Flask untuk port Render
+app = Flask('')
 
-@app_flask.route('/')
+@app.route('/')
 def home():
     return "Bot Absen Telegram Aktif!"
 
-def run_flask():
-    port = int(os.environ.get("PORT", 10000))
-    app_flask.run(host='0.0.0.0', port=port)
-
-def keep_alive():
-    t = Thread(target=run_flask)
-    t.daemon = True
-    t.start()
-
+# Status penyimpanan data sementara
 status_karyawan = {}
 waktu_mulai_izin = {}
 hitung_izin = {}
@@ -65,9 +56,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 f"👤 <b>Nama / 姓名 :</b> {nama}\n"
                 f"────────────────\n"
                 f"❌ <b>Keterangan / 说明 :</b> Anda belum melakukan <b>MASUK KERJA</b> atau sudah pulang!\n"
-                f"<i>(您还没有上班打卡或已经下班，无法进行此操作！)</i>\n"
-                f"────────────────\n"
-                f"💡 <i>Silakan klik tombol <b>MASUK KERJA</b> terlebih dahulu.\n(请先点击上班打卡按钮。)</i>",
+                f"<i>(您还没有上班打卡或已经下班，无法进行此操作！)</i>",
                 parse_mode="HTML"
             )
             return
@@ -76,11 +65,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await update.message.reply_text(
                 f"⚠️ <b>SUDAH MASUK KERJA</b>\n"
                 f"<i>(已经上班打卡)</i>\n"
-                f"────────────────\n"
-                f"👤 <b>Nama / 姓名 :</b> {nama}\n"
-                f"────────────────\n"
-                f"❌ <b>Keterangan / 说明 :</b> Anda sudah melakukan check-in / masuk kerja sebelumnya!\n"
-                f"<i>(您之前已经打过上班卡了，请勿重复点击！)</i>",
+                f"❌ Anda sudah melakukan check-in / masuk kerja sebelumnya!",
                 parse_mode="HTML"
             )
             return
@@ -88,29 +73,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         if aksi == "KEMBALI KURSI" and sedang_izin not in ["IZIN MAKAN", "IZIN MEROKOK"]:
             await update.message.reply_text(
                 f"⚠️ <b>GAGAL KEMBALI KURSI</b>\n"
-                f"<i>(无法返回座位)</i>\n"
-                f"────────────────\n"
-                f"👤 <b>Nama / 姓名 :</b> {nama}\n"
-                f"────────────────\n"
-                f"❌ <b>Keterangan / 说明 :</b> Anda tidak sedang dalam status Izin Makan atau Izin Merokok!\n"
-                f"<i>(您当前不在吃饭或抽烟状态，无需点击返回座位！)</i>\n"
-                f"────────────────\n"
-                f"💡 <i>Tombol ini hanya khusus untuk mengakhiri waktu izin.\n(此按钮专门用于结束请假时间。)</i>",
-                parse_mode="HTML"
-            )
-            return
-
-        if aksi in ["IZIN MAKAN", "IZIN MEROKOK"] and sedang_izin in ["IZIN MAKAN", "IZIN MEROKOK"]:
-            await update.message.reply_text(
-                f"⚠️ <b>GAGAL MEMILIH IZIN</b>\n"
-                f"<i>(无法选择请假)</i>\n"
-                f"────────────────\n"
-                f"👤 <b>Nama / 姓名 :</b> {nama}\n"
-                f"────────────────\n"
-                f"❌ <b>Keterangan / 说明 :</b> Anda saat ini masih tercatat sedang <b>{sedang_izin}</b>.\n"
-                f"<i>(您当前记录为：{sedang_izin}。)</i>\n"
-                f"────────────────\n"
-                f"💡 <i>Silakan klik tombol <b>KEMBALI KURSI</b> terlebih dahulu!\n(请先点击返回座位按钮！)</i>",
+                f"❌ Anda tidak sedang dalam status Izin Makan atau Izin Merokok!",
                 parse_mode="HTML"
             )
             return
@@ -122,108 +85,64 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 selisih_detik = int((waktu_sekarang - waktu_mulai).total_seconds())
                 menit_aktual = selisih_detik // 60
                 detik_aktual = selisih_detik % 60
-                info_durasi_total = f"{menit_aktual} menit {detik_aktual} detik / {menit_aktual}分钟{detik_aktual}秒"
+                info_durasi_total = f"{menit_aktual} menit {detik_aktual} detik"
             else:
-                info_durasi_total = "Tidak tercatat / 未记录"
+                info_durasi_total = "Tidak tercatat"
 
             ke_berapa = hitung_izin.get((user_id, jenis_izin_terakhir), 1)
             status_karyawan[user_id] = "MASUK"
-            
-            detail_isi = (
-                f"⏳ <b>Detail Waktu Cekin / 详细请假用时 :</b> {info_durasi_total}\n"
-                f"────────────────\n"
-                f"🔢 <b>Total Cek In / 总打卡次数 :</b> Ke-{ke_berapa} / 第{ke_berapa}次\n"
-                f"────────────────\n"
-                f"⏱️ <b>Status / 状态 :</b> Berhasil Kembali ke Kursi\n"
-                f"<i>(已返回座位继续工作)</i>"
-            )
-            pesan_penutup = "Terima kasih, sudah kembali tepat waktu.\n(谢谢您，按时返回。)"
+            detail_isi = f"⏳ <b>Durasi:</b> {info_durasi_total}\n🔢 <b>Total:</b> Ke-{ke_berapa}"
+            pesan_penutup = "Terima kasih, sudah kembali tepat waktu."
 
         elif aksi == "MASUK KERJA":
             status_karyawan[user_id] = "MASUK"
-            detail_isi = (
-                f"⏱️ <b>Status / 状态 :</b> Berhasil Check-in / Masuk Kerja\n"
-                f"<i>(上班打卡成功)</i>"
-            )
-            pesan_penutup = "Selamat bekerja, jaga kedisiplinan!\n(祝您工作愉快，遵守纪律！)"
+            detail_isi = "⏱️ <b>Status:</b> Berhasil Check-in / Masuk Kerja"
+            pesan_penutup = "Selamat bekerja, jaga kedisiplinan!"
 
-        elif aksi == "IZIN MAKAN":
+        elif aksi in ["IZIN MAKAN", "IZIN MEROKOK"]:
             status_karyawan[user_id] = aksi
             waktu_mulai_izin[user_id] = waktu_sekarang
             kunci_hitung = (user_id, aksi)
             hitung_izin[kunci_hitung] = hitung_izin.get(kunci_hitung, 0) + 1
             ke_berapa = hitung_izin[kunci_hitung]
-
-            detail_isi = (
-                f"⏱️ <b>Alokasi Izin / 规定时长 :</b> 30 Menit / 分钟\n"
-                f"────────────────\n"
-                f"🔢 <b>Total Cek In / 总打卡次数 :</b> Ke-{ke_berapa} / 第{ke_berapa}次"
-            )
-            pesan_penutup = "Silakan kembali ke kursi tepat waktu.\n(请按时返回座位。)"
-
-        elif aksi == "IZIN MEROKOK":
-            status_karyawan[user_id] = aksi
-            waktu_mulai_izin[user_id] = waktu_sekarang
-            kunci_hitung = (user_id, aksi)
-            hitung_izin[kunci_hitung] = hitung_izin.get(kunci_hitung, 0) + 1
-            ke_berapa = hitung_izin[kunci_hitung]
-
-            detail_isi = (
-                f"⏱️ <b>Alokasi Izin / 规定时长 :</b> 15 Menit / 分钟\n"
-                f"────────────────\n"
-                f"🔢 <b>Total Cek In / 总打卡次数 :</b> Ke-{ke_berapa} / 第{ke_berapa}次"
-            )
-            pesan_penutup = "Silakan kembali ke kursi tepat waktu.\n(请按时返回座位。)"
+            durasi_teks = "30 Menit" if aksi == "IZIN MAKAN" else "15 Menit"
+            detail_isi = f"⏱️ <b>Alokasi:</b> {durasi_teks}\n🔢 <b>Total:</b> Ke-{ke_berapa}"
+            pesan_penutup = "Silakan kembali ke kursi tepat waktu."
 
         else:
             status_karyawan[user_id] = None
-            detail_isi = (
-                f"⏱️ <b>Status / 状态 :</b> Selesai Shift / Pulang\n"
-                f"<i>(下班 / 班次结束)</i>"
-            )
-            pesan_penutup = "Terima kasih atas kerja keras hari ini. Hati-hati di jalan.\n(感谢今天的辛勤工作，一路平安。)"
+            detail_isi = "⏱️ <b>Status:</b> Selesai Shift / Pulang"
+            pesan_penutup = "Terima kasih atas kerja keras hari ini."
 
         pesan = (
             f"📋 <b>LAPORAN ABSEN ANGGOTA</b>\n"
-            f"<i>(员工考勤报告)</i>\n"
-            f"──────────────────────\n"
-            f"👤 <b>Nama / 姓名 :</b> {nama}\n"
-            f"────────────────\n"
-            f"📝 <b>Detail Izin / 详情 :</b> {aksi}\n"
-            f"────────────────\n"
-            f"⏰ <b>Waktu / 时间 :</b> {waktu_str}\n"
+            f"👤 <b>Nama:</b> {nama}\n"
+            f"📝 <b>Detail:</b> {aksi}\n"
+            f"⏰ <b>Waktu:</b> {waktu_str}\n"
             f"────────────────\n"
             f"{detail_isi}\n"
-            f"─────────────────────────\n"
+            f"────────────────\n"
             f"{pesan_penutup}"
         )
-        
         await update.message.reply_text(pesan, parse_mode="HTML")
 
-async def main():
-    keep_alive()
-    TOKEN = "8929417098:AAHqjy5pdj1vjNkRNUHSmRPzoALTutlsfwA"
-    
-    app = ApplicationBuilder().token(TOKEN).build()
-    app.add_handler(CommandHandler("start", start))
-    app.add_handler(MessageHandler(filters.TEXT & (~filters.COMMAND), handle_message))
-    
-    print("Bot siap dan berjalan stabil...")
-    
-    await app.initialize()
-    await app.start()
-    await app.updater.start_polling()
-    
-    stop_signal = asyncio.Event()
-    try:
-        await stop_signal.wait()
-    finally:
-        await app.updater.stop()
-        await app.stop()
-        await app.shutdown()
+def run_flask():
+    port = int(os.environ.get("PORT", 10000))
+    app.run(host='0.0.0.0', port=port, debug=False, use_reloader=False)
 
 if __name__ == "__main__":
-    try:
-        asyncio.run(main())
-    except KeyboardInterrupt:
-        print("\nBot berhasil dihentikan dengan aman.")
+    import threading
+    # Jalankan Flask di background thread agar tidak memblokir bot Telegram
+    flask_thread = threading.Thread(target=run_flask)
+    flask_thread.daemon = True
+    flask_thread.start()
+
+    TOKEN = "8929417098:AAHqjy5pdj1vjNkRNUHSmRPzoALTutlsfwA"
+    
+    # Jalankan bot Telegram menggunakan run_polling() bawaan yang stabil
+    application = ApplicationBuilder().token(TOKEN).build()
+    application.add_handler(CommandHandler("start", start))
+    application.add_handler(MessageHandler(filters.TEXT & (~filters.COMMAND), handle_message))
+    
+    print("Bot Telegram mulai berjalan...")
+    application.run_polling()
