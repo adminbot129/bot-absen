@@ -16,6 +16,7 @@ def home():
 status_karyawan = {}
 waktu_mulai_izin = {}
 hitung_izin = {}
+waktu_masuk_kerja = {}  # Variabel baru untuk mencatat waktu masuk kerja
 
 # Zona Waktu Indonesia Barat (WIB / Jakarta)
 WIB = ZoneInfo("Asia/Jakarta")
@@ -140,6 +141,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
         elif aksi == "MASUK KERJA":
             status_karyawan[user_id] = "MASUK"
+            waktu_masuk_kerja[user_id] = waktu_sekarang  # Catat waktu mulai kerja
             
             # Batas jam masuk kantor (09:30:00 WIB)
             jam_masuk_batas = waktu_sekarang.replace(hour=9, minute=30, second=0, microsecond=0)
@@ -147,7 +149,6 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
             if waktu_sekarang > jam_masuk_batas:
                 selisih_telat = int((waktu_sekarang - jam_masuk_batas).total_seconds())
                 
-                # Perhitungan Jam, Menit, dan Detik secara akurat
                 jam_telat = selisih_telat // 3600
                 sisa_detik = selisih_telat % 3600
                 menit_telat = sisa_detik // 60
@@ -200,10 +201,25 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
             pesan_penutup = "Silakan kembali ke kursi tepat waktu.\n(请按时返回座位。)"
 
         else: # PULANG KERJA
+            waktu_masuk = waktu_masuk_kerja.get(user_id)
+            if waktu_masuk:
+                selisih_kerja = int((waktu_sekarang - waktu_masuk).total_seconds())
+                jam_kerja = selisih_kerja // 3600
+                sisa_detik_kerja = selisih_kerja % 3600
+                menit_kerja = sisa_detik_kerja // 60
+                detik_kerja = sisa_detik_kerja % 60
+                info_durasi_kerja = f"{jam_kerja} jam {menit_kerja} menit {detik_kerja} detik / {jam_kerja}小时{menit_kerja}分{detik_kerja}秒"
+            else:
+                info_durasi_kerja = "Tidak tercatat / 未记录"
+
             status_karyawan[user_id] = None
+            waktu_masuk_kerja[user_id] = None  # Reset data masuk kerja
+
             detail_isi = (
                 f"⏱️ <b>Status / 状态 :</b> Selesai Shift / Pulang\n"
-                f"<i>(下班 / 班次结束)</i>"
+                f"<i>(下班 / 班次结束)</i>\n"
+                f"────────────────\n"
+                f"⏳ <b>Total Waktu Kerja / 总工作时长 :</b> {info_durasi_kerja}"
             )
             pesan_penutup = "Terima kasih atas kerja keras hari ini. Hati-hati di jalan.\n(感谢今天的辛勤工作，一路平安。)"
 
