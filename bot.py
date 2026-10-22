@@ -301,5 +301,5 @@ if __name__ == "__main__":
     application.add_handler(CommandHandler("start", start))
     application.add_handler(MessageHandler(filters.TEXT & (~filters.COMMAND), handle_message))
     
-    print("Bot Telegram mulai berjalan...")
-    application.run_polling()
+# print("Bot Telegram mulai berjalan...")
+# application.run_polling()
