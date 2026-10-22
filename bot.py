@@ -16,7 +16,7 @@ def home():
 status_karyawan = {}
 waktu_mulai_izin = {}
 hitung_izin = {}
-waktu_masuk_kerja = {}  # Variabel baru untuk mencatat waktu masuk kerja
+waktu_masuk_kerja = {}  # Variabel untuk mencatat waktu masuk kerja
 
 # Zona Waktu Indonesia Barat (WIB / Jakarta)
 WIB = ZoneInfo("Asia/Jakarta")
@@ -57,15 +57,19 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         # 1. Cek jika belum check-in (atau sudah pulang / None) tapi mencoba aksi selain MASUK KERJA
         if aksi != "MASUK KERJA" and not sedang_izin:
             await update.message.reply_text(
-                f"⚠️ <b>GAGAL MELAKUKAN AKSI</b>\n"
-                f"<i>(操作失败)</i>\n"
-                f"────────────────\n"
-                f"👤 <b>Nama / 姓名 :</b> {nama}\n"
-                f"────────────────\n"
-                f"❌ <b>Keterangan / 说明 :</b> Anda belum melakukan <b>MASUK KERJA</b> atau sudah pulang!\n"
-                f"<i>(您还没有上班打卡或已经下班，无法进行此操作！)</i>\n"
-                f"────────────────\n"
-                f"💡 <i>Silakan klik tombol <b>MASUK KERJA</b> terlebih dahulu.\n(请先点击上班打卡按钮。)</i>",
+                f"<pre>"
+                f"┌──────────────────────────────────────┐\n"
+                f"│        ⚠️ GAGAL MELAKUKAN AKSI       │\n"
+                f"│            (操作失败)                │\n"
+                f"├──────────────────────────────────────┤\n"
+                f"│ 👤 Nama / 姓名 :                     │\n"
+                f"│    {nama:<33} │\n"
+                f"│ 📱 ID : {user_id:<28} │\n"
+                f"├──────────────────────────────────────┤\n"
+                f"│ ❌ Keterangan / 说明 :               │\n"
+                f"│    Belum MASUK KERJA / 尚未上班打卡  │\n"
+                f"└──────────────────────────────────────┘"
+                f"</pre>",
                 parse_mode="HTML"
             )
             return
@@ -73,13 +77,19 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         # 2. Mencegah klik ganda tombol "MASUK KERJA"
         if aksi == "MASUK KERJA" and sedang_izin == "MASUK":
             await update.message.reply_text(
-                f"⚠️ <b>SUDAH MASUK KERJA</b>\n"
-                f"<i>(已经上班打卡)</i>\n"
-                f"────────────────\n"
-                f"👤 <b>Nama / 姓名 :</b> {nama}\n"
-                f"────────────────\n"
-                f"❌ <b>Keterangan / 说明 :</b> Anda sudah melakukan check-in / masuk kerja sebelumnya!\n"
-                f"<i>(您之前已经打过上班卡了，请勿重复点击！)</i>",
+                f"<pre>"
+                f"┌──────────────────────────────────────┐\n"
+                f"│        ⚠️ SUDAH MASUK KERJA          │\n"
+                f"│            (已经上班打卡)            │\n"
+                f"├──────────────────────────────────────┤\n"
+                f"│ 👤 Nama / 姓名 :                     │\n"
+                f"│    {nama:<33} │\n"
+                f"│ 📱 ID : {user_id:<28} │\n"
+                f"├──────────────────────────────────────┤\n"
+                f"│ ❌ Keterangan / 说明 :               │\n"
+                f"│    Sudah check-in sebelumnya!        │\n"
+                f"└──────────────────────────────────────┘"
+                f"</pre>",
                 parse_mode="HTML"
             )
             return
@@ -87,13 +97,19 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         # 3. Belum dalam status izin tapi klik kembali kursi
         if aksi == "KEMBALI KURSI" and sedang_izin not in ["IZIN MAKAN", "IZIN MEROKOK/WC"]:
             await update.message.reply_text(
-                f"⚠️ <b>GAGAL KEMBALI KURSI</b>\n"
-                f"<i>(无法返回座位)</i>\n"
-                f"────────────────\n"
-                f"👤 <b>Nama / 姓名 :</b> {nama}\n"
-                f"────────────────\n"
-                f"❌ <b>Keterangan / 说明 :</b> Anda tidak sedang dalam status Izin Makan atau Izin Merokok/WC!\n"
-                f"<i>(您当前不在吃饭或抽烟/WC状态，无需点击返回座位！)</i>",
+                f"<pre>"
+                f"┌──────────────────────────────────────┐\n"
+                f"│        ⚠️ GAGAL KEMBALI KURSI        │\n"
+                f"│            (无法返回座位)            │\n"
+                f"├──────────────────────────────────────┤\n"
+                f"│ 👤 Nama / 姓名 :                     │\n"
+                f"│    {nama:<33} │\n"
+                f"│ 📱 ID : {user_id:<28} │\n"
+                f"├──────────────────────────────────────┤\n"
+                f"│ ❌ Keterangan / 说明 :               │\n"
+                f"│    Tidak sedang dalam status izin!   │\n"
+                f"└──────────────────────────────────────┘"
+                f"</pre>",
                 parse_mode="HTML"
             )
             return
@@ -101,15 +117,19 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         # 4. Sedang izin tertentu, tapi malah pilih izin lain (Harus KEMBALI KURSI dulu)
         if aksi in ["IZIN MAKAN", "IZIN MEROKOK/WC"] and sedang_izin in ["IZIN MAKAN", "IZIN MEROKOK/WC"]:
             await update.message.reply_text(
-                f"⚠️ <b>GAGAL MEMILIH IZIN</b>\n"
-                f"<i>(无法选择请假)</i>\n"
-                f"────────────────\n"
-                f"👤 <b>Nama / 姓名 :</b> {nama}\n"
-                f"────────────────\n"
-                f"❌ <b>Keterangan / 说明 :</b> Anda saat ini masih tercatat sedang <b>{sedang_izin}</b>.\n"
-                f"<i>(您当前记录为：{sedang_izin}。)</i>\n"
-                f"────────────────\n"
-                f"💡 <i>Silakan klik tombol <b>KEMBALI KURSI</b> terlebih dahulu!\n(请先点击返回座位按钮！)</i>",
+                f"<pre>"
+                f"┌──────────────────────────────────────┐\n"
+                f"│        ⚠️ GAGAL MEMILIH IZIN         │\n"
+                f"│            (无法选择请假)            │\n"
+                f"├──────────────────────────────────────┤\n"
+                f"│ 👤 Nama / 姓名 :                     │\n"
+                f"│    {nama:<33} │\n"
+                f"│ 📱 ID : {user_id:<28} │\n"
+                f"├──────────────────────────────────────┤\n"
+                f"│ ❌ Status Aktif / 当前状态 :         │\n"
+                f"│    {sedang_izin:<33} │\n"
+                f"└──────────────────────────────────────┘"
+                f"</pre>",
                 parse_mode="HTML"
             )
             return
@@ -130,12 +150,16 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
             status_karyawan[user_id] = "MASUK"
             
             detail_isi = (
-                f"⏳ <b>Detail Waktu Cekin / 详细请假用时 :</b> {info_durasi_total}\n"
-                f"────────────────\n"
-                f"🔢 <b>Total Cek In / 总打卡次数 :</b> Ke-{ke_berapa} / 第{ke_berapa}次\n"
-                f"────────────────\n"
-                f"⏱️ <b>Status / 状态 :</b> Berhasil Kembali ke Kursi\n"
-                f"<i>(已返回座位继续工作)</i>"
+                f"├──────────────────────────────────────┤\n"
+                f"│ ⏱️ Status / 状态 :\n"
+                f"│    Berhasil Kembali ke Kursi\n"
+                f"│    (已返回座位继续工作)\n"
+                f"├──────────────────────────────────────┤\n"
+                f"│ ⏳ Detail Waktu Izin / 假用时 :\n"
+                f"│    {info_durasi_total}\n"
+                f"├──────────────────────────────────────┤\n"
+                f"│ 🔢 Total Cek In / 总打卡次数 :\n"
+                f"│    Ke-{ke_berapa} / 第{ke_berapa}次"
             )
             pesan_penutup = "Terima kasih, sudah kembali tepat waktu.\n(谢谢您，按时返回。)"
 
@@ -160,15 +184,21 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     info_telat = f"{menit_telat} menit {detik_telat} detik / 迟到 {menit_telat}分{detik_telat}秒"
                 
                 detail_isi = (
-                    f"⚠️ <b>Status / 状态 :</b> TERLAMBAT / 迟到\n"
-                    f"❌ <b>Keterangan :</b> Anda terlambat {info_telat} dari jam masuk (09:30 WIB)\n"
-                    f"<i>(您迟到了，超过了规定上班时间 09:30)</i>"
+                    f"├──────────────────────────────────────┤\n"
+                    f"│ ⏱️ Status / 状态 :\n"
+                    f"│    TERLAMBAT / 迟到\n"
+                    f"├──────────────────────────────────────┤\n"
+                    f"│ ❌ Keterangan / 说明 :\n"
+                    f"│    Terlambat {info_telat}\n"
+                    f"│    (超过规定上班时间 09:30)"
                 )
                 pesan_penutup = "Harap datang lebih tepat waktu esok hari!\n(希望明天能按时到达！)"
             else:
                 detail_isi = (
-                    f"⏱️ <b>Status / 状态 :</b> Berhasil Check-in Tepat Waktu\n"
-                    f"<i>(准时上班打卡成功)</i>"
+                    f"├──────────────────────────────────────┤\n"
+                    f"│ ⏱️ Status / 状态 :\n"
+                    f"│    Berhasil Check-in Tepat Waktu\n"
+                    f"│    (准时上班打卡成功)"
                 )
                 pesan_penutup = "Selamat bekerja, jaga kedisiplinan!\n(祝您工作愉快，遵守纪律！)"
 
@@ -180,9 +210,12 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
             ke_berapa = hitung_izin[kunci_hitung]
 
             detail_isi = (
-                f"⏱️ <b>Alokasi Izin / 规定时长 :</b> 30 Menit / 分钟\n"
-                f"────────────────\n"
-                f"🔢 <b>Total Cek In / 总打卡次数 :</b> Ke-{ke_berapa} / 第{ke_berapa}次"
+                f"├──────────────────────────────────────┤\n"
+                f"│ ⏱️ Alokasi Izin / 规定时长 :\n"
+                f"│    30 Menit / 分钟\n"
+                f"├──────────────────────────────────────┤\n"
+                f"│ 🔢 Total Cek In / 总打卡次数 :\n"
+                f"│    Ke-{ke_berapa} / 第{ke_berapa}次"
             )
             pesan_penutup = "Silakan kembali ke kursi tepat waktu.\n(请按时返回座位。)"
 
@@ -194,9 +227,12 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
             ke_berapa = hitung_izin[kunci_hitung]
 
             detail_isi = (
-                f"⏱️ <b>Alokasi Izin / 规定时长 :</b> 15 Menit / 分钟\n"
-                f"────────────────\n"
-                f"🔢 <b>Total Cek In / 总打卡次数 :</b> Ke-{ke_berapa} / 第{ke_berapa}次"
+                f"├──────────────────────────────────────┤\n"
+                f"│ ⏱️ Alokasi Izin / 规定时长 :\n"
+                f"│    15 Menit / 分钟\n"
+                f"├──────────────────────────────────────┤\n"
+                f"│ 🔢 Total Cek In / 总打卡次数 :\n"
+                f"│    Ke-{ke_berapa} / 第{ke_berapa}次"
             )
             pesan_penutup = "Silakan kembali ke kursi tepat waktu.\n(请按时返回座位。)"
 
@@ -208,7 +244,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 sisa_detik_kerja = selisih_kerja % 3600
                 menit_kerja = sisa_detik_kerja // 60
                 detik_kerja = sisa_detik_kerja % 60
-                info_durasi_kerja = f"{jam_kerja} jam {menit_kerja} menit {detik_kerja} detik / {jam_kerja}小时{menit_kerja}分{detik_kerja}秒"
+                info_durasi_kerja = f"{jam_kerja} jam {menit_kerja} menit {detik_kerja} detik\n│    ({jam_kerja}小时{menit_kerja}分{detik_kerja}秒)"
             else:
                 info_durasi_kerja = "Tidak tercatat / 未记录"
 
@@ -216,26 +252,35 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
             waktu_masuk_kerja[user_id] = None  # Reset data masuk kerja
 
             detail_isi = (
-                f"⏱️ <b>Status / 状态 :</b> Selesai Shift / Pulang\n"
-                f"<i>(下班 / 班次结束)</i>\n"
-                f"────────────────\n"
-                f"⏳ <b>Total Waktu Kerja / 总工作时长 :</b> {info_durasi_kerja}"
+                f"├──────────────────────────────────────┤\n"
+                f"│ ⏱️ Status / 状态 :\n"
+                f"│    Selesai Shift / Pulang\n"
+                f"│    (下班 / 班次结束)\n"
+                f"├──────────────────────────────────────┤\n"
+                f"│ ⏳ Total Waktu Kerja / 总工作时长 :\n"
+                f"│    {info_durasi_kerja}"
             )
-            pesan_penutup = "Terima kasih atas kerja keras hari ini. Hati-hati di jalan.\n(感谢今天的辛勤工作，一路平安。)"
+            pesan_penutup = "Terima kasih atas kerja keras hari ini.\nHati-hati di jalan.\n(感谢今天的辛勤工作，一路平安。)"
 
         pesan = (
-            f"📋 <b>LAPORAN ABSEN ANGGOTA</b>\n"
-            f"<i>(员工考勤报告)</i>\n"
-            f"──────────────────────\n"
-            f"👤 <b>Nama / 姓名 :</b> {nama}\n"
-            f"────────────────\n"
-            f"📝 <b>Detail Izin / 详情 :</b> {aksi}\n"
-            f"────────────────\n"
-            f"⏰ <b>Waktu / 时间 :</b> {waktu_str}\n"
-            f"────────────────\n"
+            f"<pre>"
+            f"┌──────────────────────────────────────┐\n"
+            f"│        📋 LAPORAN ABSEN ANGGOTA      │\n"
+            f"│             (员工考勤报告)           │\n"
+            f"├──────────────────────────────────────┤\n"
+            f"│ 👤 Nama / 姓名 :                     │\n"
+            f"│    {nama:<33} │\n"
+            f"│ 📱 ID : {str(user_id):<28} │\n"
+            f"├──────────────────────────────────────┤\n"
+            f"│ 📝 Detail / 详情 :                   │\n"
+            f"│    {aksi:<33} │\n"
+            f"├──────────────────────────────────────┤\n"
+            f"│ ⏰ Waktu / 时间 :                    │\n"
+            f"│    {waktu_str:<33} │\n"
             f"{detail_isi}\n"
-            f"─────────────────────────\n"
+            f"└──────────────────────────────────────┘\n"
             f"{pesan_penutup}"
+            f"</pre>"
         )
         
         await update.message.reply_text(pesan, parse_mode="HTML")
