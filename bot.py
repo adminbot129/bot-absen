@@ -45,6 +45,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = user.id
     aksi = update.message.text.strip()
     
+    # Waktu real-time akurat sesuai zona waktu WIB (Jakarta)
     waktu_sekarang = datetime.now(WIB)
     waktu_str = waktu_sekarang.strftime("%d %B %Y, %H:%M:%S WIB")
     
@@ -53,6 +54,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if aksi in menu_valid:
         sedang_izin = status_karyawan.get(user_id)
         
+        # 1. Cek jika belum check-in (atau sudah pulang / None) tapi mencoba aksi selain MASUK KERJA
         if aksi != "MASUK KERJA" and not sedang_izin:
             await update.message.reply_text(
                 f"<pre>"
@@ -72,6 +74,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
             )
             return
 
+        # 2. Mencegah klik ganda tombol "MASUK KERJA"
         if aksi == "MASUK KERJA" and sedang_izin == "MASUK":
             await update.message.reply_text(
                 f"<pre>"
@@ -91,6 +94,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
             )
             return
 
+        # 3. Belum dalam status izin tapi klik kembali kursi
         if aksi == "KEMBALI KURSI" and sedang_izin not in ["IZIN MAKAN", "IZIN MEROKOK/WC"]:
             await update.message.reply_text(
                 f"<pre>"
@@ -110,6 +114,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
             )
             return
 
+        # 4. Sedang izin tertentu, tapi malah pilih izin lain (Harus KEMBALI KURSI dulu)
         if aksi in ["IZIN MAKAN", "IZIN MEROKOK/WC"] and sedang_izin in ["IZIN MAKAN", "IZIN MEROKOK/WC"]:
             await update.message.reply_text(
                 f"<pre>"
@@ -129,6 +134,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
             )
             return
 
+        # --- Eksekusi Logika Aksi ---
         if aksi == "KEMBALI KURSI":
             jenis_izin_terakhir = sedang_izin
             waktu_mulai = waktu_mulai_izin.get(user_id)
@@ -159,12 +165,14 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
         elif aksi == "MASUK KERJA":
             status_karyawan[user_id] = "MASUK"
-            waktu_masuk_kerja[user_id] = waktu_sekarang  
+            waktu_masuk_kerja[user_id] = waktu_sekarang  # Catat waktu mulai kerja
             
+            # Batas jam masuk kantor (09:30:00 WIB)
             jam_masuk_batas = waktu_sekarang.replace(hour=9, minute=30, second=0, microsecond=0)
             
             if waktu_sekarang > jam_masuk_batas:
                 selisih_telat = int((waktu_sekarang - jam_masuk_batas).total_seconds())
+                
                 jam_telat = selisih_telat // 3600
                 sisa_detik = selisih_telat % 3600
                 menit_telat = sisa_detik // 60
@@ -240,6 +248,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
             else:
                 info_durasi_kerja = "Tidak tercatat / 未记录"
 
+            # Batas jam pulang resmi kantor (20:30:00 WIB)
             jam_pulang_resmi = waktu_sekarang.replace(hour=20, minute=30, second=0, microsecond=0)
             
             if waktu_sekarang < jam_pulang_resmi:
@@ -248,7 +257,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 info_pulang = "Selesai Shift / Pulang Tepat Waktu / 准时下班"
 
             status_karyawan[user_id] = None
-            waktu_masuk_kerja[user_id] = None  
+            waktu_masuk_kerja[user_id] = None  # Reset data masuk kerja
 
             detail_isi = (
                 f"├──────────────────────────────────────┤\n"
@@ -257,7 +266,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 f"    (规定下班时间 20:30)\n"
                 f"├──────────────────────────────────────┤\n"
                 f"│ ⏳ Total Waktu Kerja / 总工作时长 :\n"
-                f"    {info_durasi_total if 'info_durasi_total' in locals() else info_durasi_kerja}"
+                f"    {info_durasi_kerja}"
             )
             pesan_penutup = "Terima kasih atas kerja keras hari ini.\nHati-hati di jalan.\n(感谢今天的辛勤工作，一路平安。)"
 
@@ -291,12 +300,15 @@ def run_flask():
 if __name__ == "__main__":
     import threading
     
+    # 1. Jalankan Flask di background thread supaya web server Render tetap merespon port 10000
     flask_thread = threading.Thread(target=run_flask)
     flask_thread.daemon = True
     flask_thread.start()
 
-    TOKEN = os.environ.get("8929417098:AAHqjy5pdj1vjNkRNUHSmRPzoALTutlsfwA")
+    # 2. Ambil token bot dari Environment Variable di Render (supaya lebih aman daripada ditulis mentah)
+    TOKEN = "8929417098:AAHqjy5pdj1vjNkRNUHSmRPzoALTutlsfwA"
 
+    # 3. Jalankan bot Telegram menggunakan polling utama
     application = ApplicationBuilder().token(TOKEN).build()
     application.add_handler(CommandHandler("start", start))
     application.add_handler(MessageHandler(filters.TEXT & (~filters.COMMAND), handle_message))
