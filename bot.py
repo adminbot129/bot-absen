@@ -306,7 +306,7 @@ if __name__ == "__main__":
     flask_thread.start()
 
     # 2. Ambil token bot dari Environment Variable di Render (supaya lebih aman daripada ditulis mentah)
-    TOKEN = "8929417098:AAHqjy5pdj1vjNkRNUHSmRPzoALTutlsfwA"
+    TOKEN = "8929417098:AAHRiyhPpxEI1uHZb3Df3Yb5-P8V29Q6ZNg"
 
     # 3. Jalankan bot Telegram menggunakan polling utama
     application = ApplicationBuilder().token(TOKEN).build()
