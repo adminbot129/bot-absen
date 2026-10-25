@@ -119,7 +119,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await update.message.reply_text(
                 f"<pre>"
                 f"┌──────────────────────────────────────┐\n"
-                f"│        ⚠️ GAGAL MEMILIH IZIN          \n"
+                f"│        ⚠️ GAGAL MEMILIH IZIN         \n"
                 f"│            (无法选择请假)            \n"
                 f"├──────────────────────────────────────┤\n"
                 f"│ 👤 Nama / 姓名 :\n"
@@ -229,7 +229,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
             detail_isi = (
                 f"├──────────────────────────────────────┤\n"
                 f"│ ⏱️ Alokasi Izin / 规定时长 :\n"
-                f"    15 Menit / 分钟\n"
+                f"    10 Menit / 分钟\n"
                 f"├──────────────────────────────────────┤\n"
                 f"│ 🔢 Total Cek In / 总打卡次数 :\n"
                 f"    Ke-{ke_berapa} / 第{ke_berapa}次"
@@ -248,14 +248,22 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
             else:
                 info_durasi_kerja = "Tidak tercatat / 未记录"
 
+            # Batas jam pulang resmi kantor (20:30:00 WIB)
+            jam_pulang_resmi = waktu_sekarang.replace(hour=20, minute=30, second=0, microsecond=0)
+            
+            if waktu_sekarang < jam_pulang_resmi:
+                info_pulang = "Pulang Sebelum Jam Kerja Berakhir / 提前下班"
+            else:
+                info_pulang = "Selesai Shift / Pulang Tepat Waktu / 准时下班"
+
             status_karyawan[user_id] = None
             waktu_masuk_kerja[user_id] = None  # Reset data masuk kerja
 
             detail_isi = (
                 f"├──────────────────────────────────────┤\n"
                 f"│ ⏱️ Status / 状态 :\n"
-                f"    Selesai Shift / Pulang\n"
-                f"    (下班 / 班次结束)\n"
+                f"    {info_pulang}\n"
+                f"    (规定下班时间 20:30)\n"
                 f"├──────────────────────────────────────┤\n"
                 f"│ ⏳ Total Waktu Kerja / 总工作时长 :\n"
                 f"    {info_durasi_kerja}"
