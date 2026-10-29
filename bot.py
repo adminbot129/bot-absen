@@ -22,13 +22,12 @@ tanggal_terakhir_reset = None
 # Zona Waktu Indonesia Barat (WIB / Jakarta)
 WIB = ZoneInfo("Asia/Jakarta")
 
-# Fungsi untuk mereset seluruh data absensi dan hitungan harian
+# Fungsi untuk mereset seluruh data absensi dan hitungan harian tepat jam 01:00 WIB
 def cek_dan_reset_harian():
     global tanggal_terakhir_reset
     waktu_sekarang = datetime.now(WIB)
     tanggal_hari_ini = waktu_sekarang.date()
     
-    # Reset berjalan jika sudah masuk hari baru dan jam sudah melewati atau tepat pukul 01:00 WIB
     if tanggal_terakhir_reset != tanggal_hari_ini and waktu_sekarang.time() >= time(1, 0, 0):
         status_karyawan.clear()
         waktu_mulai_izin.clear()
@@ -40,7 +39,6 @@ def cek_dan_reset_harian():
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     cek_dan_reset_harian()
     
-    # Tombol interaktif (Inline Keyboard) di dalam chat
     keyboard = [
         [InlineKeyboardButton("MASUK KERJA", callback_data="MASUK KERJA"), InlineKeyboardButton("PULANG KERJA", callback_data="PULANG KERJA")],
         [InlineKeyboardButton("IZIN MAKAN", callback_data="IZIN MAKAN"), InlineKeyboardButton("IZIN MEROKOK/WC", callback_data="IZIN MEROKOK/WC")],
@@ -59,7 +57,6 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
     
-    # Jalankan pemeriksaan reset harian setiap ada interaksi tombol
     cek_dan_reset_harian()
     
     user = query.from_user
@@ -67,91 +64,66 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = user.id
     aksi = query.data
     
-    # Waktu real-time akurat sesuai zona waktu WIB (Jakarta)
     waktu_sekarang = datetime.now(WIB)
-    waktu_str = waktu_sekarang.strftime("%d %B %Y, %H:%M:%S WIB")
+    waktu_str = waktu_sekarang.strftime("%m/%d %H:%M:%S")
     
     sedang_izin = status_karyawan.get(user_id)
     
-    # 1. Cek jika belum check-in (atau sudah pulang / None) tapi mencoba aksi selain MASUK KERJA
+    # Validasi Dasar (Menggunakan tanda ⚠️)
     if aksi != "MASUK KERJA" and not sedang_izin:
         await query.message.reply_text(
-            f"<pre>"
-            f"┌──────────────────────────────────────┐\n"
-            f"│        ⚠️ GAGAL MELAKUKAN AKSI        \n"
-            f"│            (操作失败)                \n"
-            f"├──────────────────────────────────────┤\n"
-            f"│ 👤 Nama / 姓名 :\n"
-            f"    {nama}\n"
-            f"│ 📱 ID : {user_id}\n"
-            f"├──────────────────────────────────────┤\n"
-            f"│ ❌ Keterangan / 说明 :\n"
-            f"    Belum MASUK KERJA / 尚未上班打卡\n"
-            f"└──────────────────────────────────────┘"
-            f"</pre>",
-            parse_mode="HTML"
+            f"Pengguna: {nama}\n"
+            f"ID Pengguna: {user_id}\n"
+            f"----------------------------------------\n"
+            f"⚠️ Gagal: Belum MASUK KERJA / 尚未上班打卡",
+            reply_to_message_id=query.message.message_id
         )
         return
 
-    # 2. Mencegah klik ganda tombol "MASUK KERJA"
     if aksi == "MASUK KERJA" and sedang_izin == "MASUK":
         await query.message.reply_text(
-            f"<pre>"
-            f"┌──────────────────────────────────────┐\n"
-            f"│        ⚠️ SUDAH MASUK KERJA          \n"
-            f"│            (已经上班打卡)            \n"
-            f"├──────────────────────────────────────┤\n"
-            f"│ 👤 Nama / 姓名 :\n"
-            f"    {nama}\n"
-            f"│ 📱 ID : {user_id}\n"
-            f"├──────────────────────────────────────┤\n"
-            f"│ ❌ Keterangan / 说明 :\n"
-            f"    Sudah check-in sebelumnya!\n"
-            f"└──────────────────────────────────────┘"
-            f"</pre>",
-            parse_mode="HTML"
+            f"Pengguna: {nama}\n"
+            f"ID Pengguna: {user_id}\n"
+            f"----------------------------------------\n"
+            f"⚠️ Gagal: Sudah check-in sebelumnya / 已经上班打卡",
+            reply_to_message_id=query.message.message_id
         )
         return
 
-    # 3. Belum dalam status izin tapi klik kembali kursi
     if aksi == "KEMBALI KURSI" and sedang_izin not in ["IZIN MAKAN", "IZIN MEROKOK/WC"]:
         await query.message.reply_text(
-            f"<pre>"
-            f"┌──────────────────────────────────────┐\n"
-            f"│        ⚠️ GAGAL KEMBALI KURSI        \n"
-            f"│            (无法返回座位)            \n"
-            f"├──────────────────────────────────────┤\n"
-            f"│ 👤 Nama / 姓名 :\n"
-            f"    {nama}\n"
-            f"│ 📱 ID : {user_id}\n"
-            f"├──────────────────────────────────────┤\n"
-            f"│ ❌ Keterangan / 说明 :\n"
-            f"    Tidak sedang dalam status izin!\n"
-            f"└──────────────────────────────────────┘"
-            f"</pre>",
-            parse_mode="HTML"
+            f"Pengguna: {nama}\n"
+            f"ID Pengguna: {user_id}\n"
+            f"----------------------------------------\n"
+            f"⚠️ Gagal: Tidak sedang dalam status izin / 无法返回座位",
+            reply_to_message_id=query.message.message_id
         )
         return
 
-    # 4. Sedang izin tertentu, tapi malah pilih izin lain (Harus KEMBALI KURSI dulu)
     if aksi in ["IZIN MAKAN", "IZIN MEROKOK/WC"] and sedang_izin in ["IZIN MAKAN", "IZIN MEROKOK/WC"]:
         await query.message.reply_text(
-            f"<pre>"
-            f"┌──────────────────────────────────────┐\n"
-            f"│        ⚠️ GAGAL MEMILIH IZIN         \n"
-            f"│            (无法选择请假)            \n"
-            f"├──────────────────────────────────────┤\n"
-            f"│ 👤 Nama / 姓名 :\n"
-            f"    {nama}\n"
-            f"│ 📱 ID : {user_id}\n"
-            f"├──────────────────────────────────────┤\n"
-            f"│ ❌ Status Aktif / 当前状态 :\n"
-            f"    {sedang_izin}\n"
-            f"└──────────────────────────────────────┘"
-            f"</pre>",
-            parse_mode="HTML"
+            f"Pengguna: {nama}\n"
+            f"ID Pengguna: {user_id}\n"
+            f"----------------------------------------\n"
+            f"⚠️ Gagal: Sedang dalam status izin lain / 当前状态: {sedang_izin}",
+            reply_to_message_id=query.message.message_id
         )
         return
+
+    # --- FITUR BATASAN MAKSIMAL 3 ORANG IZIN BERBARENGAN ---
+    if aksi in ["IZIN MAKAN", "IZIN MEROKOK/WC"]:
+        jumlah_orang_izin = sum(1 for status in status_karyawan.values() if status in ["IZIN MAKAN", "IZIN MEROKOK/WC"])
+        
+        if sedang_izin not in ["IZIN MAKAN", "IZIN MEROKOK/WC"] and jumlah_orang_izin >= 3:
+            await query.message.reply_text(
+                f"Pengguna: {nama}\n"
+                f"ID Pengguna: {user_id}\n"
+                f"----------------------------------------\n"
+                f"⚠️ Gagal: Kuota izin penuh (Maksimal 3 orang)\n"
+                f"当前请假人数已满（最多3人），请稍候再试。",
+                reply_to_message_id=query.message.message_id
+            )
+            return
 
     # --- Eksekusi Logika Aksi ---
     if aksi == "KEMBALI KURSI":
@@ -161,65 +133,44 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
             selisih_detik = int((waktu_sekarang - waktu_mulai).total_seconds())
             menit_aktual = selisih_detik // 60
             detik_aktual = selisih_detik % 60
-            info_durasi_total = f"{menit_aktual} menit {detik_aktual} detik / {menit_aktual}分钟{detik_aktual}秒"
+            info_durasi = f"{menit_aktual} menit {detik_aktual} detik ({menit_aktual}分钟{detik_aktual}秒)"
         else:
-            info_durasi_total = "Tidak tercatat / 未记录"
+            info_durasi = "Tidak tercatat / 未记录"
 
         ke_berapa = hitung_izin.get((user_id, jenis_izin_terakhir), 1)
         status_karyawan[user_id] = "MASUK"
         
-        detail_isi = (
-            f"├──────────────────────────────────────┤\n"
-            f"│ ⏱️ Status / 状态 :\n"
-            f"    Berhasil Kembali ke Kursi\n"
-            f"    (已返回座位继续工作)\n"
-            f"├──────────────────────────────────────┤\n"
-            f"│ ⏳ Detail Waktu Izin / 假用时 :\n"
-            f"    {info_durasi_total}\n"
-            f"├──────────────────────────────────────┤\n"
-            f"│ 🔢 Total Cek In / 总打卡次数 :\n"
-            f"    Ke-{ke_berapa} / 第{ke_berapa}次"
+        teks_laporan = (
+            f"Pengguna: {nama}\n"
+            f"ID Pengguna: {user_id}\n"
+            f"----------------------------------------\n"
+            f"✅ Berhasil Kembali ke Kursi: {waktu_str}\n"
+            f"Perhatian: Durasi izin {info_durasi} (Ke-{ke_berapa})"
         )
-        pesan_penutup = "Terima kasih, sudah kembali tepat waktu.\n(谢谢您，按时返回。)"
 
     elif aksi == "MASUK KERJA":
         status_karyawan[user_id] = "MASUK"
-        waktu_masuk_kerja[user_id] = waktu_sekarang  # Catat waktu mulai kerja
-        
-        # Batas jam masuk kantor (09:30:00 WIB)
+        waktu_masuk_kerja[user_id] = waktu_sekarang  
         jam_masuk_batas = waktu_sekarang.replace(hour=9, minute=30, second=0, microsecond=0)
         
         if waktu_sekarang > jam_masuk_batas:
             selisih_telat = int((waktu_sekarang - jam_masuk_batas).total_seconds())
-            
-            jam_telat = selisih_telat // 3600
-            sisa_detik = selisih_telat % 3600
-            menit_telat = sisa_detik // 60
-            detik_telat = sisa_detik % 60
-            
-            if jam_telat > 0:
-                info_telat = f"{jam_telat} jam {menit_telat} menit {detik_telat} detik / 迟到 {jam_telat}小时{menit_telat}分{detik_telat}秒"
-            else:
-                info_telat = f"{menit_telat} menit {detik_telat} detik / 迟到 {menit_telat}分{detik_telat}秒"
-            
-            detail_isi = (
-                f"├──────────────────────────────────────┤\n"
-                f"│ ⏱️ Status / 状态 :\n"
-                f"    TERLAMBAT / 迟到\n"
-                f"├──────────────────────────────────────┤\n"
-                f"│ ❌ Keterangan / 说明 :\n"
-                f"    Terlambat {info_telat}\n"
-                f"    (超过规定上班时间 09:30)"
+            menit_telat = selisih_telat // 60
+            teks_laporan = (
+                f"Pengguna: {nama}\n"
+                f"ID Pengguna: {user_id}\n"
+                f"----------------------------------------\n"
+                f"⚠️ Terlambat Check-in: {waktu_str}\n"
+                f"Perhatian: Anda terlambat {menit_telat} menit (超过规定上班时间 09:30)"
             )
-            pesan_penutup = "Harap datang lebih tepat waktu esok hari!\n(希望明天能按时到达！)"
         else:
-            detail_isi = (
-                f"├──────────────────────────────────────┤\n"
-                f"│ ⏱️ Status / 状态 :\n"
-                f"    Berhasil Check-in Tepat Waktu\n"
-                f"    (准时上班打卡成功)"
+            teks_laporan = (
+                f"Pengguna: {nama}\n"
+                f"ID Pengguna: {user_id}\n"
+                f"----------------------------------------\n"
+                f"✅ Check-in Berhasil: Tepat Waktu - {waktu_str}\n"
+                f"Perhatian: Selamat bekerja dengan disiplin!"
             )
-            pesan_penutup = "Selamat bekerja, jaga kedisiplinan!\n(祝您工作愉快，遵守纪律！)"
 
     elif aksi == "IZIN MAKAN":
         status_karyawan[user_id] = aksi
@@ -228,15 +179,13 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         hitung_izin[kunci_hitung] = hitung_izin.get(kunci_hitung, 0) + 1
         ke_berapa = hitung_izin[kunci_hitung]
 
-        detail_isi = (
-            f"├──────────────────────────────────────┤\n"
-            f"│ ⏱️ Alokasi Izin / 规定时长 :\n"
-            f"    30 Menit / 分钟\n"
-            f"├──────────────────────────────────────┤\n"
-            f"│ 🔢 Total Cek In / 总打卡次数 :\n"
-            f"    Ke-{ke_berapa} / 第{ke_berapa}次"
+        teks_laporan = (
+            f"Pengguna: {nama}\n"
+            f"ID Pengguna: {user_id}\n"
+            f"----------------------------------------\n"
+            f"✅ Check-in Berhasil: Izin Makan - {waktu_str}\n"
+            f"Perhatian: Ini adalah check-in ke-{ke_berapa} Izin Makan Anda"
         )
-        pesan_penutup = "Silakan kembali ke kursi tepat waktu.\n(请按时返回座位。)"
 
     elif aksi == "IZIN MEROKOK/WC":
         status_karyawan[user_id] = aksi
@@ -245,75 +194,37 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         hitung_izin[kunci_hitung] = hitung_izin.get(kunci_hitung, 0) + 1
         ke_berapa = hitung_izin[kunci_hitung]
 
-        detail_isi = (
-            f"├──────────────────────────────────────┤\n"
-            f"│ ⏱️ Alokasi Izin / 规定时长 :\n"
-            f"    10 Menit / 分钟\n"
-            f"├──────────────────────────────────────┤\n"
-            f"│ 🔢 Total Cek In / 总打卡次数 :\n"
-            f"    Ke-{ke_berapa} / 第{ke_berapa}次"
+        teks_laporan = (
+            f"Pengguna: {nama}\n"
+            f"ID Pengguna: {user_id}\n"
+            f"----------------------------------------\n"
+            f"✅ Check-in Berhasil: Ke Kamar Mandi / Merokok - {waktu_str}\n"
+            f"Perhatian: Ini adalah check-in ke-{ke_berapa} Ke Kamar Mandi Anda"
         )
-        pesan_penutup = "Silakan kembali ke kursi tepat waktu.\n(请按时返回座位。)"
 
     else: # PULANG KERJA
         waktu_masuk = waktu_masuk_kerja.get(user_id)
         if waktu_masuk:
             selisih_kerja = int((waktu_sekarang - waktu_masuk).total_seconds())
             jam_kerja = selisih_kerja // 3600
-            sisa_detik_kerja = selisih_kerja % 3600
-            menit_kerja = sisa_detik_kerja // 60
-            detik_kerja = sisa_detik_kerja % 60
-            info_durasi_kerja = f"{jam_kerja} jam {menit_kerja} menit {detik_kerja} detik\n    ({jam_kerja}小时{menit_kerja}分{detik_kerja}秒)"
+            menit_kerja = (selisih_kerja % 3600) // 60
+            info_durasi_kerja = f"{jam_kerja} jam {menit_kerja} menit"
         else:
-            info_durasi_kerja = "Tidak tercatat / 未记录"
-
-        # Batas jam pulang resmi kantor (20:30:00 WIB)
-        jam_pulang_resmi = waktu_sekarang.replace(hour=20, minute=30, second=0, microsecond=0)
-        
-        if waktu_sekarang < jam_pulang_resmi:
-            info_pulang = "Pulang Sebelum Jam Kerja Berakhir / 提前下班"
-        else:
-            info_pulang = "Selesai Shift / Pulang Tepat Waktu / 准时下班"
+            info_durasi_kerja = "Tidak tercatat"
 
         status_karyawan[user_id] = None
-        waktu_masuk_kerja[user_id] = None  # Reset data masuk kerja
+        waktu_masuk_kerja[user_id] = None  
 
-        detail_isi = (
-            f"├──────────────────────────────────────┤\n"
-            f"│ ⏱️ Status / 状态 :\n"
-            f"    {info_pulang}\n"
-            f"    (规定下班时间 20:30)\n"
-            f"├──────────────────────────────────────┤\n"
-            f"│ ⏳ Total Waktu Kerja / 总工作时长 :\n"
-            f"    {info_durasi_kerja}"
+        teks_laporan = (
+            f"Pengguna: {nama}\n"
+            f"ID Pengguna: {user_id}\n"
+            f"----------------------------------------\n"
+            f"✅ Selesai Shift / Pulang: {waktu_str}\n"
+            f"Perhatian: Total waktu kerja Anda {info_durasi_kerja}. Hati-hati di jalan!"
         )
-        pesan_penutup = "Terima kasih atas kerja keras hari ini.\nHati-hati di jalan.\n(感谢今天的辛勤工作，一路平安。)"
 
-    pesan = (
-        f"<pre>"
-        f"┌──────────────────────────────────────┐\n"
-        f"│        📋 LAPORAN ABSEN ANGGOTA      \n"
-        f"│             (员工考勤报告)           \n"
-        f"├──────────────────────────────────────┤\n"
-        f"│ 👤 Nama / 姓名 :\n"
-        f"    {nama}\n"
-        f"│ 📱 ID : {user_id}\n"
-        f"├──────────────────────────────────────┤\n"
-        f"│ 📝 Detail / 详情 :\n"
-        f"    {aksi}\n"
-        f"├──────────────────────────────────────┤\n"
-        f"│ ⏰ Waktu / 时间 :\n"
-        f"    {waktu_str}\n"
-        f"{detail_isi}\n"
-        f"└──────────────────────────────────────┘\n"
-        f"{pesan_penutup}"
-        f"</pre>"
-    )
-    
-    # Mengirim pesan balasan yang mereply pesan user secara rapi
     await query.message.reply_text(
-        pesan, 
-        parse_mode="HTML", 
+        teks_laporan, 
         reply_to_message_id=query.message.message_id
     )
 
@@ -324,18 +235,15 @@ def run_flask():
 if __name__ == "__main__":
     import threading
     
-    # 1. Jalankan Flask di background thread supaya web server Render tetap merespon port 10000
     flask_thread = threading.Thread(target=run_flask)
     flask_thread.daemon = True
     flask_thread.start()
 
-    # 2. Ambil token bot dari Environment Variable di Render (Pastikan token diganti baru dari @BotFather)
     TOKEN = os.environ.get("TOKEN", "8929417098:AAHRiyhPpxEI1uHZb3Df3Yb5-P8V29Q6ZNg")
 
-    # 3. Jalankan bot Telegram menggunakan polling utama dengan callback query handler
     application = ApplicationBuilder().token(TOKEN).build()
     application.add_handler(CommandHandler("start", start))
     application.add_handler(CallbackQueryHandler(button_handler))
     
-    print("Bot Telegram mulai berjalan dengan tombol inline dan auto-reset jam 01:00 WIB...")
+    print("Bot Telegram mulai berjalan dengan pemberitahuan peringatan ⚠️...")
     application.run_polling()
