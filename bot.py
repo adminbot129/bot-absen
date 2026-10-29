@@ -169,8 +169,8 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     f"│ 📱 ID : {user_id}\n"
                     f"├──────────────────────────────────────┤\n"
                     f"│ ⚠️ Keterangan / 说明 :\n"
-                    f"    Maksimal 3 orang yang izin!\n"
-                    f"    最多允许3人同时请假\n"
+                    f"    Sedang Izin: 3/3 Orang (Penuh)\n"
+                    f"    当前请假人数已满 (3/3)\n"
                     f"└──────────────────────────────────────┘"
                     f"</pre>",
                     parse_mode="HTML"
@@ -251,11 +251,18 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
             kunci_hitung = (user_id, aksi)
             hitung_izin[kunci_hitung] = hitung_izin.get(kunci_hitung, 0) + 1
             ke_berapa = hitung_izin[kunci_hitung]
+            
+            # Hitung jumlah orang yang sedang izin saat ini (termasuk user ini)
+            jumlah_orang_izin = sum(1 for status in status_karyawan.values() if status in ["IZIN MAKAN", "IZIN MEROKOK/WC"])
 
             detail_isi = (
                 f"├──────────────────────────────────────┤\n"
                 f"│ ⏱️ Alokasi Izin / 规定时长 :\n"
                 f"    30 Menit / 分钟\n"
+                f"├──────────────────────────────────────┤\n"
+                f"│ 👥 Status Izin / 当前请假人数 :\n"
+                f"    Sedang Izin: {jumlah_orang_izin}/3 Orang (Maks 3)\n"
+                f"    当前请假: {jumlah_orang_izin}/3人\n"
                 f"├──────────────────────────────────────┤\n"
                 f"│ 🔢 Total Cek In / 总打卡次数 :\n"
                 f"    Ke-{ke_berapa} / 第{ke_berapa}次"
@@ -268,11 +275,18 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
             kunci_hitung = (user_id, aksi)
             hitung_izin[kunci_hitung] = hitung_izin.get(kunci_hitung, 0) + 1
             ke_berapa = hitung_izin[kunci_hitung]
+            
+            # Hitung jumlah orang yang sedang izin saat ini (termasuk user ini)
+            jumlah_orang_izin = sum(1 for status in status_karyawan.values() if status in ["IZIN MAKAN", "IZIN MEROKOK/WC"])
 
             detail_isi = (
                 f"├──────────────────────────────────────┤\n"
                 f"│ ⏱️ Alokasi Izin / 规定时长 :\n"
                 f"    10 Menit / 分钟\n"
+                f"├──────────────────────────────────────┤\n"
+                f"│ 👥 Status Izin / 当前请假人数 :\n"
+                f"    Sedang Izin: {jumlah_orang_izin}/3 Orang (Maks 3)\n"
+                f"    当前请假: {jumlah_orang_izin}/3人\n"
                 f"├──────────────────────────────────────┤\n"
                 f"│ 🔢 Total Cek In / 总打卡次数 :\n"
                 f"    Ke-{ke_berapa} / 第{ke_berapa}次"
@@ -356,5 +370,5 @@ if __name__ == "__main__":
     application.add_handler(CommandHandler("start", start))
     application.add_handler(MessageHandler(filters.TEXT & (~filters.COMMAND), handle_message))
     
-    print("Bot Telegram mulai berjalan dengan batasan 3 orang dan auto-reset jam 01:00 WIB...")
+    print("Bot Telegram mulai berjalan...")
     application.run_polling()
