@@ -1,5 +1,5 @@
 import os
-from datetime import datetime
+from datetime import datetime, time
 from zoneinfo import ZoneInfo
 from flask import Flask
 from telegram import KeyboardButton, ReplyKeyboardMarkup, Update
@@ -17,11 +17,28 @@ status_karyawan = {}
 waktu_mulai_izin = {}
 hitung_izin = {}
 waktu_masuk_kerja = {}
+tanggal_terakhir_reset = None
 
 # Zona Waktu Indonesia Barat (WIB / Jakarta)
 WIB = ZoneInfo("Asia/Jakarta")
 
+# Fungsi Auto-Reset harian tepat jam 01:00 WIB saat pergantian tanggal
+def cek_dan_reset_harian():
+    global tanggal_terakhir_reset
+    waktu_sekarang = datetime.now(WIB)
+    tanggal_hari_ini = waktu_sekarang.date()
+    
+    if tanggal_terakhir_reset != tanggal_hari_ini and waktu_sekarang.time() >= time(1, 0, 0):
+        status_karyawan.clear()
+        waktu_mulai_izin.clear()
+        hitung_izin.clear()
+        waktu_masuk_kerja.clear()
+        tanggal_terakhir_reset = tanggal_hari_ini
+        print(f"[AUTO-RESET] Data absensi berhasil di-reset pada {waktu_sekarang.strftime('%Y-%m-%d %H:%M:%S')}")
+
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    cek_dan_reset_harian()
+    
     keyboard = [
         [KeyboardButton("MASUK KERJA"), KeyboardButton("PULANG KERJA")],
         [KeyboardButton("IZIN MAKAN"), KeyboardButton("IZIN MEROKOK/WC")],
@@ -39,6 +56,9 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not update.message or not update.message.text:
         return
+    
+    # Jalankan pengecekan reset harian setiap ada pesan masuk
+    cek_dan_reset_harian()
     
     user = update.effective_user
     nama = user.full_name
@@ -336,5 +356,5 @@ if __name__ == "__main__":
     application.add_handler(CommandHandler("start", start))
     application.add_handler(MessageHandler(filters.TEXT & (~filters.COMMAND), handle_message))
     
-    print("Bot Telegram mulai berjalan...")
+    print("Bot Telegram mulai berjalan dengan batasan 3 orang dan auto-reset jam 01:00 WIB...")
     application.run_polling()
