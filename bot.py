@@ -1,9 +1,14 @@
 import os
+import logging
 from datetime import datetime, time, timedelta
 from zoneinfo import ZoneInfo
 from flask import Flask
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
 from telegram.ext import ApplicationBuilder, CallbackQueryHandler, CommandHandler, ContextTypes, MessageHandler, filters
+
+# Konfigurasi Logging agar error terlihat jelas di console
+logging.basicConfig(format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 # Inisialisasi Flask untuk port Render
 app = Flask(__name__)
@@ -521,13 +526,12 @@ if __name__ == "__main__":
     flask_thread.daemon = True
     flask_thread.start()
 
-    TOKEN = "8929417098:AAEUOjUMNT2A0O5Px8eHoOKp5zNMc398O7M"
+    TOKEN = "8929417098:AAEUOjUMNT2A0O5Px8eHoOKp5zNMc398O7M"  # <-- Ganti dengan token aslimu di sini
 
-    # Menambahkan timeout agar koneksi tidak terputus (TimedOut error)
     application = ApplicationBuilder().token(TOKEN).connect_timeout(30).read_timeout(30).write_timeout(30).build()
     
     application.add_handler(CommandHandler("start", start))
     application.add_handler(CallbackQueryHandler(handle_callback))
     
     print("Bot Telegram mulai berjalan dengan stabil...")
-    application.run_polling()
+    application.run_polling(allowed_updates=Update.ALL_TYPES)
