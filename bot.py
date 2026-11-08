@@ -528,7 +528,7 @@ if __name__ == "__main__":
     flask_thread.daemon = True
     flask_thread.start()
 
-    TOKEN = "8929417098:AAHRiyhPpxEI1uHZb3Df3Yb5-P8V29Q6ZNg"
+    TOKEN = "8929417098:AAEUOjUMNT2A0O5Px8eHoOKp5zNMc398O7M"
 
     application = ApplicationBuilder().token(TOKEN).build()
     application.add_handler(CommandHandler("start", start))
