@@ -90,11 +90,10 @@ async def cek_durasi_izin_berkala(context: ContextTypes.DEFAULT_TYPE):
             # --- PERINGATAN 1: Sisa 1 Menit Lagi ---
             if warning_1_detik <= selisih_detik < max_detik and not job_data.get(user_key_warn1):
                 job_data[user_key_warn1] = True
-                sisa_detik_lagi = max_detik - selisih_detik
                 pesan_notif = (
                     f"<pre>"
                     f"┌──────────────────────────────────────┐\n"
-                    f"│       ⚠️ PERINGATAN WAKTU IZIN       \n"
+                    f"│        ⚠️ PERINGATAN WAKTU IZIN        \n"
                     f"│            (请假时间警告)            \n"
                     f"├──────────────────────────────────────┤\n"
                     f"│ 👤 Nama / 姓名 :\n"
@@ -122,8 +121,8 @@ async def cek_durasi_izin_berkala(context: ContextTypes.DEFAULT_TYPE):
                 pesan_notif = (
                     f"<pre>"
                     f"┌──────────────────────────────────────┐\n"
-                    f"│       🚨 WAKTU IZIN TELAH HABIS      \n"
-                    f"│              (请假时间已到)          \n"
+                    f"│        🚨 WAKTU IZIN TELAH HABIS       \n"
+                    f"│             (请假时间已到)           \n"
                     f"├──────────────────────────────────────┤\n"
                     f"│ 👤 Nama / 姓名 :\n"
                     f"    <a href='tg://user?id={user_id}'>Karyawan / 员工</a>\n"
@@ -151,7 +150,7 @@ async def cek_durasi_izin_berkala(context: ContextTypes.DEFAULT_TYPE):
                 pesan_notif = (
                     f"<pre>"
                     f"┌──────────────────────────────────────┐\n"
-                    f"│       🔥 PERINGATAN KERAS            \n"
+                    f"│        🔥 PERINGATAN KERAS           \n"
                     f"│            (严重超时警告)            \n"
                     f"├──────────────────────────────────────┤\n"
                     f"│ 👤 Nama / 姓名 :\n"
@@ -184,7 +183,7 @@ async def cek_durasi_izin_berkala(context: ContextTypes.DEFAULT_TYPE):
                     pesan_notif = (
                         f"<pre>"
                         f"┌──────────────────────────────────────┐\n"
-                        f"│       📢 PANGGILAN DARURAT (SPAM)    \n"
+                        f"│        📢 PANGGILAN DARURAT (SPAM)     \n"
                         f"│            (紧急呼叫与催促)          \n"
                         f"├──────────────────────────────────────┤\n"
                         f"│ 👤 Nama / 姓名 :\n"
@@ -344,7 +343,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 await update.message.reply_text(
                     f"<pre>"
                     f"┌──────────────────────────────────────┐\n"
-                    f"│        ⚠️ KUOTA IZIN PENUH          \n"
+                    f"│        ⚠️ KUOTA IZIN PENUH           \n"
                     f"│            (请假名额已满)            \n"
                     f"├──────────────────────────────────────┤\n"
                     f"│ 👤 Nama / 姓名 :\n"
