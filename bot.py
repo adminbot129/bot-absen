@@ -214,7 +214,6 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not current_jobs:
         context.job_queue.run_repeating(cek_durasi_izin_berkala, interval=30, first=5, chat_id=chat_id, name=str(chat_id))
 
-    # Menggunakan Inline Keyboard agar tombol muncul langsung di pesan (bisa di grup maupun DM)
     keyboard = [
         [InlineKeyboardButton("MASUK KERJA", callback_data="MASUK KERJA"), InlineKeyboardButton("PULANG KERJA", callback_data="PULANG KERJA")],
         [InlineKeyboardButton("IZIN MAKAN", callback_data="IZIN MAKAN"), InlineKeyboardButton("IZIN MEROKOK/WC", callback_data="IZIN MEROKOK/WC")],
@@ -245,7 +244,6 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     
     sedang_izin = status_karyawan.get(user_id)
     
-    # 1. Cek jika belum check-in tapi mencoba aksi selain MASUK KERJA
     if aksi != "MASUK KERJA" and not sedang_izin:
         await query.message.reply_text(
             f"<pre>"
@@ -265,7 +263,6 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
         return
 
-    # 2. Mencegah klik ganda tombol "MASUK KERJA"
     if aksi == "MASUK KERJA" and sedang_izin == "MASUK":
         await query.message.reply_text(
             f"<pre>"
@@ -285,7 +282,6 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
         return
 
-    # 3. Belum dalam status izin tapi klik kembali kursi
     if aksi == "KEMBALI KURSI" and sedang_izin not in ["IZIN MAKAN", "IZIN MEROKOK/WC"]:
         await query.message.reply_text(
             f"<pre>"
@@ -305,7 +301,6 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
         return
 
-    # 4. Sedang izin tertentu, tapi malah pilih izin lain
     if aksi in ["IZIN MAKAN", "IZIN MEROKOK/WC"] and sedang_izin in ["IZIN MAKAN", "IZIN MEROKOK/WC"]:
         await query.message.reply_text(
             f"<pre>"
@@ -325,7 +320,6 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
         return
 
-    # 5. Batasan Maksimal 3 Orang Izin Bersamaan
     if aksi in ["IZIN MAKAN", "IZIN MEROKOK/WC"]:
         jumlah_orang_izin = sum(1 for status in status_karyawan.values() if status in ["IZIN MAKAN", "IZIN MEROKOK/WC"])
         if sedang_izin not in ["IZIN MAKAN", "IZIN MEROKOK/WC"] and jumlah_orang_izin >= 3:
@@ -348,7 +342,6 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
             )
             return
 
-    # --- Eksekusi Logika Aksi ---
     if aksi == "KEMBALI KURSI":
         jenis_izin_terakhir = sedang_izin
         waktu_mulai = waktu_mulai_izin.get(user_id)
@@ -530,9 +523,11 @@ if __name__ == "__main__":
 
     TOKEN = "8929417098:AAEUOjUMNT2A0O5Px8eHoOKp5zNMc398O7M"
 
-    application = ApplicationBuilder().token(TOKEN).build()
+    # Menambahkan timeout agar koneksi tidak terputus (TimedOut error)
+    application = ApplicationBuilder().token(TOKEN).connect_timeout(30).read_timeout(30).write_timeout(30).build()
+    
     application.add_handler(CommandHandler("start", start))
     application.add_handler(CallbackQueryHandler(handle_callback))
     
-    print("Bot Telegram mulai berjalan dengan tombol Inline Keyboard...")
+    print("Bot Telegram mulai berjalan dengan stabil...")
     application.run_polling()
