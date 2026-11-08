@@ -1,36 +1,75 @@
 import os
 import logging
 import html
+import threading
+
 from datetime import datetime, time, timedelta
 from zoneinfo import ZoneInfo
-from flask import Flask
-from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
-from telegram.ext import ApplicationBuilder, CallbackQueryHandler, CommandHandler, ContextTypes
 
-# Konfigurasi Logging
+from flask import Flask
+
+from telegram import ReplyKeyboardMarkup, Update
+from telegram.ext import (
+    ApplicationBuilder,
+    CommandHandler,
+    MessageHandler,
+    ContextTypes,
+    filters,
+)
+
+# ==================================================
+# KONFIGURASI
+# ==================================================
+
+TOKEN = "8929417098:AAEUOjUMNT2A0O5Px8eHoOKp5zNMc398O7M"
+
+WIB = ZoneInfo("Asia/Jakarta")
+
 logging.basicConfig(
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
     level=logging.INFO
 )
+
 logger = logging.getLogger(__name__)
 
-# Flask untuk Render
+# ==================================================
+# FLASK UNTUK RENDER
+# ==================================================
+
 app = Flask(__name__)
 
-@app.route('/')
+
+@app.route("/")
 def home():
     return "Bot Absen Telegram Aktif!"
 
-# Penyimpanan data sementara
+
+def run_flask():
+    port = int(os.environ.get("PORT", 10000))
+
+    app.run(
+        host="0.0.0.0",
+        port=port,
+        debug=False,
+        use_reloader=False
+    )
+
+
+# ==================================================
+# PENYIMPANAN DATA
+# ==================================================
+
 status_karyawan = {}
 waktu_mulai_izin = {}
 hitung_izin = {}
 waktu_masuk_kerja = {}
+
 tanggal_terakhir_reset = None
 
-# Zona waktu WIB
-WIB = ZoneInfo("Asia/Jakarta")
 
+# ==================================================
+# RESET DATA HARIAN
+# ==================================================
 
 def cek_dan_reset_harian():
     global tanggal_terakhir_reset
@@ -46,6 +85,7 @@ def cek_dan_reset_harian():
         waktu_mulai_izin.clear()
         hitung_izin.clear()
         waktu_masuk_kerja.clear()
+
         tanggal_terakhir_reset = tanggal_hari_ini
 
         print(
@@ -54,14 +94,22 @@ def cek_dan_reset_harian():
         )
 
 
-async def cek_durasi_izin_berkala(context: ContextTypes.DEFAULT_TYPE):
+# ==================================================
+# PENGINGAT OTOMATIS IZIN
+# ==================================================
+
+async def cek_durasi_izin_berkala(
+    context: ContextTypes.DEFAULT_TYPE
+):
     waktu_sekarang = datetime.now(WIB)
 
     for user_id, status in list(status_karyawan.items()):
+
         if status not in ["IZIN MAKAN", "IZIN MEROKOK/WC"]:
             continue
 
         waktu_mulai = waktu_mulai_izin.get(user_id)
+
         if not waktu_mulai:
             continue
 
@@ -85,6 +133,7 @@ async def cek_durasi_izin_berkala(context: ContextTypes.DEFAULT_TYPE):
 
         if selisih_detik > max_detik:
             lebih_detik = selisih_detik - max_detik
+
             jam_lebih = lebih_detik // 3600
             sisa_det_lebih = lebih_detik % 3600
             menit_lebih = sisa_det_lebih // 60
@@ -99,6 +148,7 @@ async def cek_durasi_izin_berkala(context: ContextTypes.DEFAULT_TYPE):
             info_kelebihan = "Belum lewat batas / 尚未超时"
 
         job_data = context.job.data
+
         if job_data is None:
             context.job.data = {}
             job_data = context.job.data
@@ -109,6 +159,8 @@ async def cek_durasi_izin_berkala(context: ContextTypes.DEFAULT_TYPE):
         user_key_spam_terakhir = f"{user_id}_spam_terakhir"
 
         pesan_notif = None
+
+        # PERINGATAN 1 MENIT SEBELUM BATAS
 
         if (
             warning_1_detik <= selisih_detik < max_detik
@@ -141,6 +193,8 @@ async def cek_durasi_izin_berkala(context: ContextTypes.DEFAULT_TYPE):
                 f"</pre>"
             )
 
+        # PERINGATAN WAKTU IZIN HABIS
+
         elif (
             max_detik <= selisih_detik < warning_3_detik
             and not job_data.get(user_key_warn2)
@@ -172,6 +226,8 @@ async def cek_durasi_izin_berkala(context: ContextTypes.DEFAULT_TYPE):
                 f"└──────────────────────────────────────┘"
                 f"</pre>"
             )
+
+        # PERINGATAN TERLAMBAT 5 MENIT
 
         elif (
             warning_3_detik <= selisih_detik < warning_4_mulai
@@ -207,12 +263,17 @@ async def cek_durasi_izin_berkala(context: ContextTypes.DEFAULT_TYPE):
                 f"</pre>"
             )
 
+        # PERINGATAN DIULANG SETIAP MENIT
+
         elif selisih_detik >= warning_4_mulai:
+
             waktu_terakhir_spam = job_data.get(
-                user_key_spam_terakhir, 0
+                user_key_spam_terakhir,
+                0
             )
 
             if selisih_detik - waktu_terakhir_spam >= 60:
+
                 job_data[user_key_spam_terakhir] = selisih_detik
 
                 pesan_notif = (
@@ -251,15 +312,46 @@ async def cek_durasi_izin_berkala(context: ContextTypes.DEFAULT_TYPE):
             )
 
 
-async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
+# ==================================================
+# PAPAN KETIK TELEGRAM
+# ==================================================
+
+def buat_keyboard():
+
+    keyboard = [
+        ["MASUK KERJA", "PULANG KERJA"],
+        ["IZIN MAKAN", "IZIN MEROKOK/WC"],
+        ["KEMBALI KURSI"]
+    ]
+
+    return ReplyKeyboardMarkup(
+        keyboard,
+        resize_keyboard=True,
+        one_time_keyboard=False,
+        is_persistent=True
+    )
+
+
+# ==================================================
+# PERINTAH START
+# ==================================================
+
+async def start(
+    update: Update,
+    context: ContextTypes.DEFAULT_TYPE
+):
     cek_dan_reset_harian()
 
     chat_id = update.effective_chat.id
 
     if context.job_queue is not None:
-        current_jobs = context.job_queue.get_jobs_by_name(str(chat_id))
+
+        current_jobs = context.job_queue.get_jobs_by_name(
+            str(chat_id)
+        )
 
         if not current_jobs:
+
             context.job_queue.run_repeating(
                 cek_durasi_izin_berkala,
                 interval=30,
@@ -267,69 +359,68 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 chat_id=chat_id,
                 name=str(chat_id)
             )
+
     else:
         logger.error(
             "JobQueue tidak tersedia. Pasang dependency "
             "'python-telegram-bot[job-queue]' agar pengingat otomatis aktif."
         )
 
-    keyboard = [
-        [
-            InlineKeyboardButton(
-                "MASUK KERJA",
-                callback_data="MASUK KERJA"
-            ),
-            InlineKeyboardButton(
-                "PULANG KERJA",
-                callback_data="PULANG KERJA"
-            )
-        ],
-        [
-            InlineKeyboardButton(
-                "IZIN MAKAN",
-                callback_data="IZIN MAKAN"
-            ),
-            InlineKeyboardButton(
-                "IZIN MEROKOK/WC",
-                callback_data="IZIN MEROKOK/WC"
-            )
-        ],
-        [
-            InlineKeyboardButton(
-                "KEMBALI KURSI",
-                callback_data="KEMBALI KURSI"
-            )
-        ]
-    ]
-
-    reply_markup = InlineKeyboardMarkup(keyboard)
-
     await update.message.reply_text(
         "Silakan pilih tombol absensi di bawah ini:\n"
         "<i>请在下方选择考勤按钮：</i>",
-        reply_markup=reply_markup,
+        reply_markup=buat_keyboard(),
         parse_mode="HTML"
     )
 
 
-async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    query = update.callback_query
-    await query.answer()
+# ==================================================
+# PROSES PILIHAN TOMBOL ABSENSI
+# ==================================================
+
+async def handle_message(
+    update: Update,
+    context: ContextTypes.DEFAULT_TYPE
+):
 
     cek_dan_reset_harian()
 
-    user = query.from_user
+    if not update.message or not update.effective_user:
+        return
+
+    user = update.effective_user
+
     nama = html.escape(user.full_name)
     user_id = user.id
-    aksi = query.data
+
+    aksi = update.message.text.strip()
 
     waktu_sekarang = datetime.now(WIB)
-    waktu_str = waktu_sekarang.strftime("%d %B %Y, %H:%M:%S WIB")
+
+    waktu_str = waktu_sekarang.strftime(
+        "%d %B %Y, %H:%M:%S WIB"
+    )
 
     sedang_izin = status_karyawan.get(user_id)
 
+    pilihan_valid = [
+        "MASUK KERJA",
+        "PULANG KERJA",
+        "IZIN MAKAN",
+        "IZIN MEROKOK/WC",
+        "KEMBALI KURSI"
+    ]
+
+    if aksi not in pilihan_valid:
+        return
+
+    # ----------------------------------------------
+    # VALIDASI BELUM MASUK KERJA
+    # ----------------------------------------------
+
     if aksi != "MASUK KERJA" and not sedang_izin:
-        await query.message.reply_text(
+
+        await update.message.reply_text(
             f"<pre>"
             f"┌──────────────────────────────────────┐\n"
             f"│        ⚠️ GAGAL MELAKUKAN AKSI        \n"
@@ -345,10 +436,16 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
             f"</pre>",
             parse_mode="HTML"
         )
+
         return
 
+    # ----------------------------------------------
+    # VALIDASI SUDAH MASUK KERJA
+    # ----------------------------------------------
+
     if aksi == "MASUK KERJA" and sedang_izin == "MASUK":
-        await query.message.reply_text(
+
+        await update.message.reply_text(
             f"<pre>"
             f"┌──────────────────────────────────────┐\n"
             f"│        ⚠️ SUDAH MASUK KERJA          \n"
@@ -364,13 +461,19 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
             f"</pre>",
             parse_mode="HTML"
         )
+
         return
+
+    # ----------------------------------------------
+    # VALIDASI KEMBALI KURSI
+    # ----------------------------------------------
 
     if aksi == "KEMBALI KURSI" and sedang_izin not in [
         "IZIN MAKAN",
         "IZIN MEROKOK/WC"
     ]:
-        await query.message.reply_text(
+
+        await update.message.reply_text(
             f"<pre>"
             f"┌──────────────────────────────────────┐\n"
             f"│        ⚠️ GAGAL KEMBALI KURSI        \n"
@@ -386,13 +489,19 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
             f"</pre>",
             parse_mode="HTML"
         )
+
         return
+
+    # ----------------------------------------------
+    # VALIDASI SEDANG IZIN
+    # ----------------------------------------------
 
     if aksi in ["IZIN MAKAN", "IZIN MEROKOK/WC"] and sedang_izin in [
         "IZIN MAKAN",
         "IZIN MEROKOK/WC"
     ]:
-        await query.message.reply_text(
+
+        await update.message.reply_text(
             f"<pre>"
             f"┌──────────────────────────────────────┐\n"
             f"│        ⚠️ GAGAL MEMILIH IZIN         \n"
@@ -408,11 +517,18 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
             f"</pre>",
             parse_mode="HTML"
         )
+
         return
 
+    # ----------------------------------------------
+    # BATAS MAKSIMAL 3 ORANG IZIN
+    # ----------------------------------------------
+
     if aksi in ["IZIN MAKAN", "IZIN MEROKOK/WC"]:
+
         jumlah_orang_izin = sum(
-            1 for status in status_karyawan.values()
+            1
+            for status in status_karyawan.values()
             if status in ["IZIN MAKAN", "IZIN MEROKOK/WC"]
         )
 
@@ -420,7 +536,8 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
             sedang_izin not in ["IZIN MAKAN", "IZIN MEROKOK/WC"]
             and jumlah_orang_izin >= 3
         ):
-            await query.message.reply_text(
+
+            await update.message.reply_text(
                 f"<pre>"
                 f"┌──────────────────────────────────────┐\n"
                 f"│        ⚠️ KUOTA IZIN PENUH           \n"
@@ -437,16 +554,25 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 f"</pre>",
                 parse_mode="HTML"
             )
+
             return
 
+    # ----------------------------------------------
+    # KEMBALI KURSI
+    # ----------------------------------------------
+
     if aksi == "KEMBALI KURSI":
+
         jenis_izin_terakhir = sedang_izin
+
         waktu_mulai = waktu_mulai_izin.get(user_id)
 
         if waktu_mulai:
+
             selisih_detik = int(
                 (waktu_sekarang - waktu_mulai).total_seconds()
             )
+
             menit_aktual = selisih_detik // 60
             detik_aktual = selisih_detik % 60
 
@@ -454,14 +580,18 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 f"{menit_aktual} menit {detik_aktual} detik / "
                 f"{menit_aktual}分钟{detik_aktual}秒"
             )
+
         else:
             info_durasi_total = "Tidak tercatat / 未记录"
 
         ke_berapa = hitung_izin.get(
-            (user_id, jenis_izin_terakhir), 1
+            (user_id, jenis_izin_terakhir),
+            1
         )
 
         status_karyawan[user_id] = "MASUK"
+
+        waktu_mulai_izin.pop(user_id, None)
 
         detail_isi = (
             f"├──────────────────────────────────────┤\n"
@@ -481,30 +611,44 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "(谢谢您，按时返回。)"
         )
 
+    # ----------------------------------------------
+    # MASUK KERJA
+    # ----------------------------------------------
+
     elif aksi == "MASUK KERJA":
+
         status_karyawan[user_id] = "MASUK"
+
         waktu_masuk_kerja[user_id] = waktu_sekarang
 
         jam_masuk_batas = waktu_sekarang.replace(
-            hour=9, minute=30, second=0, microsecond=0
+            hour=9,
+            minute=30,
+            second=0,
+            microsecond=0
         )
 
         if waktu_sekarang > jam_masuk_batas:
+
             selisih_telat = int(
                 (waktu_sekarang - jam_masuk_batas).total_seconds()
             )
+
             jam_telat = selisih_telat // 3600
             sisa_detik = selisih_telat % 3600
             menit_telat = sisa_detik // 60
             detik_telat = sisa_detik % 60
 
             if jam_telat > 0:
+
                 info_telat = (
                     f"{jam_telat} jam {menit_telat} menit "
                     f"{detik_telat} detik / 迟到 "
                     f"{jam_telat}小时{menit_telat}分{detik_telat}秒"
                 )
+
             else:
+
                 info_telat = (
                     f"{menit_telat} menit {detik_telat} detik / 迟到 "
                     f"{menit_telat}分{detik_telat}秒"
@@ -524,7 +668,9 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 "Harap datang lebih tepat waktu esok hari!\n"
                 "(希望明天能按时到达！)"
             )
+
         else:
+
             detail_isi = (
                 f"├──────────────────────────────────────┤\n"
                 f"│ ⏱️ Status / 状态 :\n"
@@ -537,16 +683,27 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 "(祝您工作愉快，遵守纪律！)"
             )
 
+    # ----------------------------------------------
+    # IZIN MAKAN
+    # ----------------------------------------------
+
     elif aksi == "IZIN MAKAN":
+
         status_karyawan[user_id] = aksi
+
         waktu_mulai_izin[user_id] = waktu_sekarang
 
         kunci_hitung = (user_id, aksi)
-        hitung_izin[kunci_hitung] = hitung_izin.get(kunci_hitung, 0) + 1
+
+        hitung_izin[kunci_hitung] = (
+            hitung_izin.get(kunci_hitung, 0) + 1
+        )
+
         ke_berapa = hitung_izin[kunci_hitung]
 
         jumlah_orang_izin = sum(
-            1 for status in status_karyawan.values()
+            1
+            for status in status_karyawan.values()
             if status in ["IZIN MAKAN", "IZIN MEROKOK/WC"]
         )
 
@@ -568,16 +725,27 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "(请按时返回座位。)"
         )
 
+    # ----------------------------------------------
+    # IZIN MEROKOK / WC
+    # ----------------------------------------------
+
     elif aksi == "IZIN MEROKOK/WC":
+
         status_karyawan[user_id] = aksi
+
         waktu_mulai_izin[user_id] = waktu_sekarang
 
         kunci_hitung = (user_id, aksi)
-        hitung_izin[kunci_hitung] = hitung_izin.get(kunci_hitung, 0) + 1
+
+        hitung_izin[kunci_hitung] = (
+            hitung_izin.get(kunci_hitung, 0) + 1
+        )
+
         ke_berapa = hitung_izin[kunci_hitung]
 
         jumlah_orang_izin = sum(
-            1 for status in status_karyawan.values()
+            1
+            for status in status_karyawan.values()
             if status in ["IZIN MAKAN", "IZIN MEROKOK/WC"]
         )
 
@@ -599,13 +767,20 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "(请按时返回座位。)"
         )
 
+    # ----------------------------------------------
+    # PULANG KERJA
+    # ----------------------------------------------
+
     else:
+
         waktu_masuk = waktu_masuk_kerja.get(user_id)
 
         if waktu_masuk:
+
             selisih_kerja = int(
                 (waktu_sekarang - waktu_masuk).total_seconds()
             )
+
             jam_kerja = selisih_kerja // 3600
             sisa_detik_kerja = selisih_kerja % 3600
             menit_kerja = sisa_detik_kerja // 60
@@ -616,24 +791,34 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 f"{detik_kerja} detik\n"
                 f"    ({jam_kerja}小时{menit_kerja}分{detik_kerja}秒)"
             )
+
         else:
             info_durasi_kerja = "Tidak tercatat / 未记录"
 
         jam_pulang_resmi = waktu_sekarang.replace(
-            hour=20, minute=30, second=0, microsecond=0
+            hour=20,
+            minute=30,
+            second=0,
+            microsecond=0
         )
 
         if waktu_sekarang < jam_pulang_resmi:
+
             info_pulang = (
                 "Pulang Sebelum Jam Kerja Berakhir / 提前下班"
             )
+
         else:
+
             info_pulang = (
                 "Selesai Shift / Pulang Tepat Waktu / 准时下班"
             )
 
         status_karyawan[user_id] = None
+
         waktu_masuk_kerja[user_id] = None
+
+        waktu_mulai_izin.pop(user_id, None)
 
         detail_isi = (
             f"├──────────────────────────────────────┤\n"
@@ -650,6 +835,10 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "Hati-hati di jalan.\n"
             "(感谢今天的辛勤工作，一路平安。)"
         )
+
+    # ----------------------------------------------
+    # LAPORAN ABSENSI
+    # ----------------------------------------------
 
     pesan = (
         f"<pre>"
@@ -672,11 +861,16 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
         f"</pre>"
     )
 
-    await query.message.reply_text(
+    await update.message.reply_text(
         pesan,
-        parse_mode="HTML"
+        parse_mode="HTML",
+        reply_markup=buat_keyboard()
     )
 
+
+# ==================================================
+# ERROR HANDLER
+# ==================================================
 
 async def error_handler(
     update: object,
@@ -688,25 +882,18 @@ async def error_handler(
     )
 
 
-def run_flask():
-    port = int(os.environ.get("PORT", 10000))
-    app.run(
-        host="0.0.0.0",
-        port=port,
-        debug=False,
-        use_reloader=False
-    )
-
+# ==================================================
+# MENJALANKAN BOT
+# ==================================================
 
 if __name__ == "__main__":
-    import threading
 
-    flask_thread = threading.Thread(target=run_flask)
-    flask_thread.daemon = True
+    flask_thread = threading.Thread(
+        target=run_flask,
+        daemon=True
+    )
+
     flask_thread.start()
-
-    # MASUKKAN TOKEN BOT LANGSUNG DI SINI
-    TOKEN = "8929417098:AAEUOjUMNT2A0O5Px8eHoOKp5zNMc398O7M"
 
     application = (
         ApplicationBuilder()
@@ -717,8 +904,17 @@ if __name__ == "__main__":
         .build()
     )
 
-    application.add_handler(CommandHandler("start", start))
-    application.add_handler(CallbackQueryHandler(handle_callback))
+    application.add_handler(
+        CommandHandler("start", start)
+    )
+
+    application.add_handler(
+        MessageHandler(
+            filters.TEXT & ~filters.COMMAND,
+            handle_message
+        )
+    )
+
     application.add_error_handler(error_handler)
 
     print("Bot Telegram mulai berjalan dengan stabil...")
