@@ -21,7 +21,7 @@ from telegram.ext import (
 # KONFIGURASI
 # ==================================================
 
-TOKEN = "8929417098:AAEUOjUMNT2A0O5Px8eHoOKp5zNMc398O7M"
+TOKEN = "8929417098:AAGt_RVb8rMRILv428SKoQrPSaZUENXEMGw"
 
 WIB = ZoneInfo("Asia/Jakarta")
 
